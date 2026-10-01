@@ -1,0 +1,4371 @@
+# TPT Thought
+
+## Cognitive Process, Thought Representation & Deliberation Engine
+
+**Repository:** `tpt-thought`
+**Organisation:** TPT Solutions
+**Language:** Rust
+**Status:** Proposed foundational repository
+**License:** MIT OR Apache-2.0
+**Primary role:** Cognitive process orchestration and thought representation
+
+---
+
+# 1. Executive Summary
+
+`tpt-thought` is a Rust-native cognitive process engine designed to model the lifecycle of a thought independently of any particular AI model, LLM, neural architecture, memory database, or agent framework.
+
+The purpose of TPT Thought is **not to be another AI model**.
+
+It is not:
+
+* an LLM;
+* a prompt framework;
+* a chatbot;
+* a memory database;
+* a reasoning engine;
+* a neural inference runtime;
+* a model router;
+* an agent framework.
+
+Instead, TPT Thought provides the missing layer between:
+
+```text
+WORLD / INPUT
+      ↓
+COGNITIVE STATE
+      ↓
+THOUGHT
+      ↓
+REASONING / INFERENCE
+      ↓
+DECISION
+      ↓
+INTENTION
+      ↓
+ACTION
+      ↓
+OUTCOME
+      ↓
+LEARNING
+      ↓
+NEW COGNITIVE STATE
+```
+
+The central abstraction is:
+
+> **A thought is a dynamically evolving cognitive state/process that can receive stimuli, retrieve memories, form hypotheses, invoke intelligence, evaluate alternatives, generate intentions, produce actions, observe outcomes, and update itself.**
+
+The repository should therefore provide a **general-purpose cognitive process protocol**, allowing Anima, Eve, Intellect, Augur, Axiom, Infer, Pulse and future systems to participate in one coherent loop.
+
+---
+
+# 2. The Problem
+
+Current AI architectures generally collapse cognition into:
+
+```text
+prompt
+  ↓
+model
+  ↓
+response
+```
+
+This loses important distinctions.
+
+A biological or artificial cognitive system must distinguish between:
+
+```text
+observation
+memory
+attention
+belief
+hypothesis
+prediction
+uncertainty
+reasoning
+value
+intention
+decision
+action
+outcome
+learning
+```
+
+These are not interchangeable.
+
+For example:
+
+> "There is smoke."
+
+is an observation.
+
+> "There may be a fire."
+
+is a hypothesis.
+
+> "There is an 80% probability of fire."
+
+is a probabilistic belief.
+
+> "Investigating the temperature would reduce uncertainty."
+
+is a metacognitive assessment.
+
+> "Check the temperature."
+
+is an intention.
+
+> "Activate thermal sensor."
+
+is an action.
+
+> "Temperature = 850°C."
+
+is a new observation.
+
+TPT Thought exists to model this transition explicitly.
+
+---
+
+# 3. Design Principle
+
+The central architectural rule is:
+
+> **Thought owns the cognitive trajectory, not the intelligence used to generate individual conclusions.**
+
+Therefore:
+
+```text
+Thought
+   │
+   ├── Anima → state/memory/attention
+   │
+   ├── Eve → deliberate reasoning
+   │
+   ├── Intellect → structured intelligence
+   │
+   ├── Augur → probabilistic inference
+   │
+   ├── Axiom → uncertainty / formal properties
+   │
+   ├── Infer → neural model execution
+   │
+   ├── Pulse → reactive communication
+   │
+   └── external systems → observations/actions
+```
+
+No particular backend is privileged.
+
+---
+
+# 4. The Cognitive Stack
+
+The intended TPT architecture is:
+
+```text
+                         APPLICATION / AGENT
+                                │
+                                ▼
+                         ┌─────────────┐
+                         │   THOUGHT   │
+                         │             │
+                         │ cognitive   │
+                         │ process     │
+                         └──────┬──────┘
+                                │
+              ┌─────────────────┼──────────────────┐
+              │                 │                  │
+              ▼                 ▼                  ▼
+          ┌────────┐       ┌────────┐        ┌──────────┐
+          │ ANIMA  │       │  EVE   │        │INTELLECT │
+          │        │       │        │        │          │
+          │ state  │       │reason  │        │judgement │
+          │ memory │       │causal  │        │selection │
+          │attention│      │learn   │        │prediction│
+          │agency  │       │abstract│        │confidence│
+          └────┬───┘       └───┬────┘        └────┬─────┘
+               │               │                  │
+               │               │          ┌───────┴────────┐
+               │               │          │                │
+               │               │       fast path       deep path
+               │               │          │                │
+               │               │      Jev/etc.            Eve
+               │
+               └────────────────────────────────────────────
+                                │
+                 ┌──────────────┼──────────────┐
+                 ▼              ▼              ▼
+               AUGUR         INFER           AXIOM
+             probability     neural       uncertainty /
+              inference     execution        proof
+                 │              │              │
+                 └──────────────┼──────────────┘
+                                │
+                           TPT COMPUTE
+                                │
+                         CPU / GPU / NPU
+```
+
+---
+
+# 5. Relationship to `tpt-intellect`
+
+`tpt-intellect` already provides the structured intelligence substrate.
+
+Its current architecture includes:
+
+* typed intelligence requests;
+* `Decision<T>`;
+* backend abstraction;
+* capability discovery;
+* candidate reduction;
+* policies;
+* escalation cascades;
+* ensembles;
+* specialist backends;
+* remote backends;
+* streaming;
+* provenance;
+* intelligence IR;
+* verification;
+* a Jev reference adapter.
+
+Therefore TPT Thought must **consume Intellect rather than recreate it**.
+
+## Example
+
+Thought asks:
+
+```text
+Question:
+    Which candidate action has the highest expected utility?
+```
+
+Thought does not decide which model answers.
+
+It submits an intelligence request:
+
+```text
+Thought
+   ↓
+tpt-intellect
+   ↓
+backend selection
+   ├── Jev
+   ├── neural model
+   ├── Bayesian model
+   ├── specialist model
+   ├── ensemble
+   ├── remote provider
+   └── future provider
+   ↓
+Decision<Action>
+```
+
+The cognitive process then evaluates the result.
+
+---
+
+# 6. Jev Is Not a Dependency of Thought
+
+Jev must remain an implementation detail.
+
+The architecture must never contain:
+
+```text
+if jev { ... }
+```
+
+as a fundamental cognitive mechanism.
+
+Instead:
+
+```text
+IntelligenceProvider
+```
+
+or:
+
+```text
+tpt-intellect
+```
+
+is the abstraction.
+
+Possible providers include:
+
+```text
+Jev
+tpt-infer
+tpt-augur
+tpt-eve
+LLM
+local LLM
+remote LLM
+specialist model
+classifier
+Bayesian model
+rule engine
+human
+ensemble
+future unknown architecture
+```
+
+The system should be able to add a new backend without modifying Thought's cognitive model.
+
+---
+
+# 7. Thought as a State Machine
+
+A thought should have an explicit lifecycle.
+
+```text
+CREATED
+   │
+   ▼
+RECEIVED
+   │
+   ▼
+ATTENDING
+   │
+   ▼
+CONTEXTUALISING
+   │
+   ▼
+ASSOCIATING
+   │
+   ▼
+HYPOTHESISING
+   │
+   ▼
+EVALUATING
+   │
+   ├──────────────┐
+   │              │
+   ▼              ▼
+ACCEPTED       UNCERTAIN
+   │              │
+   │              ▼
+   │          INVESTIGATING
+   │              │
+   │              ▼
+   │          RE-EVALUATING
+   │              │
+   └──────────────┘
+          │
+          ▼
+       INTENDING
+          │
+          ▼
+       ACTING
+          │
+          ▼
+      OBSERVING
+          │
+          ▼
+       LEARNING
+          │
+          ▼
+       CONSOLIDATING
+          │
+          ▼
+        COMPLETE
+```
+
+The state machine must permit loops.
+
+Cognition is not linear.
+
+---
+
+# 8. Thought Object
+
+The core type should represent a cognitive process rather than merely a string.
+
+Conceptually:
+
+```rust
+pub struct Thought {
+    pub id: ThoughtId,
+    pub parent: Option<ThoughtId>,
+
+    pub origin: ThoughtOrigin,
+    pub state: ThoughtState,
+
+    pub context: ThoughtContext,
+
+    pub attention: AttentionState,
+    pub salience: f64,
+    pub novelty: f64,
+
+    pub content: ThoughtContent,
+
+    pub observations: Vec<ObservationRef>,
+    pub memories: Vec<MemoryRef>,
+
+    pub hypotheses: Vec<Hypothesis>,
+    pub predictions: Vec<Prediction>,
+
+    pub beliefs: Vec<Belief>,
+    pub alternatives: Vec<Alternative>,
+
+    pub evidence: Vec<EvidenceRef>,
+
+    pub confidence: Confidence,
+
+    pub uncertainty: Uncertainty,
+
+    pub value: Option<ValueAssessment>,
+
+    pub intentions: Vec<Intention>,
+
+    pub actions: Vec<ActionRef>,
+
+    pub outcomes: Vec<Outcome>,
+
+    pub provenance: ThoughtProvenance,
+}
+```
+
+This is conceptual rather than a mandatory final Rust structure.
+
+The implementation should avoid premature coupling.
+
+---
+
+# 9. Thought Content Must Be Typed
+
+Thought content must not be restricted to natural language.
+
+Possible content:
+
+```rust
+pub enum ThoughtContent {
+    Text(TextContent),
+    Structured(StructuredValue),
+    Observation(Observation),
+    Hypothesis(Hypothesis),
+    Belief(Belief),
+    Prediction(Prediction),
+    Question(Question),
+    Intention(Intention),
+    Decision(Decision),
+    Multimodal(MultimodalContent),
+    Reference(ContentReference),
+}
+```
+
+This allows:
+
+```text
+vision → Thought
+audio → Thought
+sensor → Thought
+database event → Thought
+LLM output → Thought
+symbolic fact → Thought
+human input → Thought
+robot state → Thought
+```
+
+without forcing everything through text.
+
+---
+
+# 10. Thought Graph
+
+Thoughts should form a graph rather than a conversation history.
+
+```text
+Thought A
+   │
+   ├── supports → Thought B
+   ├── contradicts → Thought C
+   ├── causes → Thought D
+   ├── derived-from → Thought E
+   ├── generalises → Thought F
+   ├── specialises → Thought G
+   └── triggers → Thought H
+```
+
+This graph should support:
+
+* causal relationships;
+* logical relationships;
+* temporal relationships;
+* semantic relationships;
+* associative relationships;
+* provenance;
+* contradiction;
+* abstraction;
+* analogy.
+
+The graph should be compatible with Anima's causal memory model without duplicating Anima storage.
+
+---
+
+# 11. Attention
+
+Thought must have an attention state.
+
+Attention should not mean merely:
+
+```text
+importance = number
+```
+
+It should support multiple factors:
+
+```text
+salience
+novelty
+urgency
+goal relevance
+risk
+uncertainty
+expected information gain
+emotional/value relevance
+recency
+resource availability
+```
+
+Conceptually:
+
+```text
+attention_score =
+    salience
+  + novelty
+  + urgency
+  + goal_relevance
+  + uncertainty
+  + information_gain
+  + risk
+  - resource_cost
+```
+
+The exact formula must remain configurable.
+
+Thought calculates cognitive demand.
+
+Anima decides how that demand maps to actual compute scheduling.
+
+---
+
+# 12. Global Workspace
+
+Anima should be expanded with a global workspace.
+
+Thought should interact with it.
+
+```text
+             GLOBAL WORKSPACE
+                    │
+       ┌────────────┼────────────┐
+       │            │            │
+     MEMORY       EVE        INTELLECT
+       │            │            │
+       │        REASONING        │
+       │            │            │
+       └────────────┼────────────┘
+                    │
+                 THOUGHT
+```
+
+A Thought can:
+
+```text
+publish()
+attend()
+subscribe()
+broadcast()
+request()
+withdraw()
+```
+
+The workspace should expose currently relevant cognitive state to participating subsystems.
+
+---
+
+# 13. Working Memory
+
+Thought requires short-lived working memory.
+
+This is distinct from long-term Anima memory.
+
+Working memory contains:
+
+```text
+current observations
+active hypotheses
+candidate explanations
+recent decisions
+current goals
+intermediate reasoning
+temporary variables
+current constraints
+```
+
+It should have:
+
+* strict capacity;
+* attention weighting;
+* decay;
+* eviction;
+* priority;
+* provenance.
+
+Anima should own persistent memory.
+
+Thought should own the current working set.
+
+---
+
+# 14. Episodic Memory
+
+Anima already has a semantic state engine with temporal decay, reinforcement and causal relationships.
+
+It should be extended to support richer episodic records.
+
+An episode should capture:
+
+```text
+timestamp
+context
+observation
+thought
+belief
+prediction
+action
+expected outcome
+actual outcome
+prediction error
+decision
+confidence
+reward/value
+```
+
+This enables:
+
+```text
+experience
+    ↓
+episodic memory
+    ↓
+replay
+    ↓
+pattern extraction
+    ↓
+abstraction
+    ↓
+semantic knowledge
+```
+
+---
+
+# 15. Thought Branching
+
+Thought must support alternative branches.
+
+Example:
+
+```text
+Observation
+   │
+   ▼
+"Machine stopped."
+   │
+   ├── Hypothesis A: power failure
+   │
+   ├── Hypothesis B: overheating
+   │
+   ├── Hypothesis C: mechanical failure
+   │
+   └── Hypothesis D: software failure
+```
+
+Each branch can have:
+
+```text
+probability
+confidence
+evidence
+cost
+risk
+expected information gain
+```
+
+Branches may be:
+
+* explored;
+* pruned;
+* merged;
+* suspended;
+* promoted;
+* rejected.
+
+---
+
+# 16. Hypothesis Management
+
+Thought should provide a generic hypothesis lifecycle.
+
+```text
+GENERATED
+   ↓
+UNTESTED
+   ↓
+SUPPORTED / WEAKENED
+   ↓
+TESTING
+   ↓
+UPDATED
+   ↓
+ACCEPTED / REJECTED / SUSPENDED
+```
+
+Eve provides the reasoning mechanisms for generating and evaluating hypotheses.
+
+Augur provides probabilistic inference.
+
+Intellect provides structured decisions.
+
+Thought owns the lifecycle.
+
+---
+
+# 17. Prediction
+
+Prediction must be a first-class Thought primitive.
+
+```text
+Prediction {
+    predicted_state,
+    expected_time,
+    confidence,
+    assumptions,
+    source_thought,
+}
+```
+
+After the future observation:
+
+```text
+prediction
+     ↓
+actual observation
+     ↓
+prediction error
+```
+
+Prediction error should become an event.
+
+---
+
+# 18. Prediction Error
+
+Prediction error should trigger configurable cognitive responses.
+
+```text
+small error
+    ↓
+continue
+
+moderate error
+    ↓
+update belief
+
+large error
+    ↓
+increase attention
+    ↓
+investigate
+
+catastrophic error
+    ↓
+suspend model
+    ↓
+re-evaluate assumptions
+```
+
+Prediction error can feed:
+
+* Anima memory reinforcement;
+* Eve active learning;
+* Augur belief updates;
+* Intellect confidence;
+* attention;
+* future planning.
+
+---
+
+# 19. Metacognition
+
+Eve already implements metacognition, including confidence tracking, knowledge-gap detection and learning prioritisation.
+
+Thought should consume this capability rather than duplicate it.
+
+Thought should ask:
+
+```text
+How certain are we?
+
+What do we not know?
+
+What assumptions are being made?
+
+What evidence is missing?
+
+Could another explanation fit?
+
+What would change our conclusion?
+
+Should we continue thinking?
+
+Should we act?
+
+Should we ask for help?
+```
+
+Eve answers these questions.
+
+Thought uses the answers to control the cognitive process.
+
+---
+
+# 20. Cognitive Escalation
+
+One of the most important features should be escalation.
+
+Example:
+
+```text
+Observation
+   ↓
+Intellect
+   ↓
+confidence 0.98
+   ↓
+accept
+```
+
+versus:
+
+```text
+Observation
+   ↓
+Intellect
+   ↓
+confidence 0.52
+   ↓
+Thought escalates
+   ↓
+Eve
+   ↓
+generate hypotheses
+   ↓
+Augur
+   ↓
+estimate probabilities
+   ↓
+Intellect
+   ↓
+re-evaluate
+```
+
+The escalation policy must be configurable.
+
+Possible levels:
+
+```text
+L0 — reflex
+L1 — structured intelligence
+L2 — specialist intelligence
+L3 — probabilistic inference
+L4 — deliberate reasoning
+L5 — multi-hypothesis investigation
+L6 — human escalation
+```
+
+These are architectural levels, not claims about biological cognition.
+
+---
+
+# 21. System 1 / System 2
+
+TPT Thought should not hard-code "System 1" and "System 2".
+
+Instead it should implement:
+
+```text
+FAST COGNITION
+```
+
+and:
+
+```text
+DELIBERATIVE COGNITION
+```
+
+The fast path might use:
+
+* cached results;
+* deterministic algorithms;
+* Jev;
+* classifiers;
+* specialist models;
+* simple heuristics;
+* learned policies.
+
+The deliberative path might use:
+
+* Eve;
+* causal reasoning;
+* Augur;
+* multiple models;
+* counterfactual reasoning;
+* experiments;
+* verification.
+
+The architecture must allow additional cognitive modes in future.
+
+---
+
+# 22. Value and Utility
+
+Thought needs to represent value, but should not become the universal value engine.
+
+A Thought may contain:
+
+```rust
+pub struct ValueAssessment {
+    pub utility: f64,
+    pub cost: f64,
+    pub risk: f64,
+    pub urgency: f64,
+    pub novelty: f64,
+    pub expected_information_gain: f64,
+}
+```
+
+Long-term value/reward mechanisms should eventually be candidates for a dedicated `tpt-value` repository if the abstraction grows sufficiently.
+
+For now, Thought provides the interface.
+
+---
+
+# 23. Intention
+
+A Thought can produce an intention.
+
+```text
+Thought
+   ↓
+"I believe X."
+   ↓
+"I want outcome Y."
+   ↓
+"I intend to perform Z."
+```
+
+An intention should contain:
+
+```text
+goal
+desired outcome
+constraints
+risk tolerance
+priority
+required capabilities
+deadline
+provenance
+```
+
+Anima INP can then negotiate execution.
+
+---
+
+# 24. Action Selection
+
+Thought should not directly execute arbitrary actions.
+
+Instead:
+
+```text
+Thought
+   ↓
+candidate actions
+   ↓
+Intellect
+   ↓
+decision
+   ↓
+Anima / INP
+   ↓
+capability provider
+   ↓
+action
+```
+
+This preserves separation of concerns.
+
+---
+
+# 25. Action Outcome Loop
+
+Every significant action should optionally produce:
+
+```text
+Action
+   ↓
+Expected outcome
+   ↓
+Actual outcome
+   ↓
+Prediction error
+   ↓
+Learning event
+```
+
+This creates the core cognitive feedback loop.
+
+---
+
+# 26. Learning Loop
+
+The fundamental Thought learning cycle:
+
+```text
+OBSERVE
+   ↓
+REPRESENT
+   ↓
+PREDICT
+   ↓
+ACT
+   ↓
+OBSERVE RESULT
+   ↓
+COMPARE
+   ↓
+PREDICTION ERROR
+   ↓
+UPDATE
+   ↓
+CONSOLIDATE
+```
+
+This must be implemented as an explicit architecture rather than left to an LLM prompt.
+
+---
+
+# 27. Consolidation
+
+Thought should support an idle/consolidation lifecycle.
+
+During active operation:
+
+```text
+experience
+```
+
+During consolidation:
+
+```text
+replay
+   ↓
+pattern detection
+   ↓
+abstraction
+   ↓
+belief revision
+   ↓
+memory strengthening
+   ↓
+memory pruning
+   ↓
+knowledge consolidation
+```
+
+This should integrate with:
+
+* Anima SSE;
+* Eve abstraction;
+* Eve active learning;
+* Eve metacognition.
+
+---
+
+# 28. Forgetting
+
+Forgetting is a feature, not merely a failure.
+
+Thought should support:
+
+```text
+temporary thought
+weak association
+strong memory
+consolidated knowledge
+expired thought
+pruned thought
+```
+
+Anima remains responsible for memory decay.
+
+Thought remains responsible for cognitive relevance.
+
+---
+
+# 29. Contradiction Handling
+
+Thought should explicitly represent contradictions.
+
+```text
+Thought A:
+    "Machine is operational."
+
+Thought B:
+    "Machine is not operational."
+```
+
+Instead of silently choosing one:
+
+```text
+CONTRADICTION
+    ↓
+attention ↑
+    ↓
+investigation
+```
+
+Possible resolution:
+
+```text
+new evidence
+    ↓
+belief update
+```
+
+or:
+
+```text
+context separation
+```
+
+or:
+
+```text
+both remain conditionally valid
+```
+
+Eve's symbolic and causal reasoning systems should provide the actual contradiction analysis.
+
+---
+
+# 30. Uncertainty
+
+Thought must never reduce uncertainty to a single generic confidence value.
+
+Distinguish:
+
+```text
+confidence
+probability
+epistemic uncertainty
+aleatoric uncertainty
+unknown
+contradiction
+abstention
+```
+
+Where possible:
+
+* `tpt-axiom` supplies uncertainty semantics;
+* `tpt-augur` supplies probabilistic inference;
+* `tpt-intellect` supplies decision confidence.
+
+Thought orchestrates these.
+
+---
+
+# 31. Provenance
+
+Every significant Thought transition should be traceable.
+
+Example:
+
+```text
+Thought T42
+    │
+    ├── Observation O17
+    │
+    ├── Memory M91
+    │
+    ├── Intellect Decision D4
+    │       └── backend: specialist-vision-v3
+    │
+    ├── Eve Reasoning R22
+    │
+    ├── Augur Inference P12
+    │
+    ├── Axiom Verification V8
+    │
+    └── Intention I7
+```
+
+The system should be able to answer:
+
+> "Why did the agent think this?"
+
+without relying on an LLM-generated explanation.
+
+---
+
+# 32. Replay
+
+A Thought should be replayable.
+
+Given:
+
+```text
+initial state
+inputs
+backend versions
+configuration
+random seeds
+model identifiers
+memory references
+```
+
+the system should attempt to reproduce:
+
+```text
+thought trajectory
+```
+
+This should integrate with `tpt-intellect` provenance and verification.
+
+---
+
+# 33. Determinism
+
+Thought itself should support deterministic replay where possible.
+
+However, it must not require every backend to be deterministic.
+
+Therefore:
+
+```text
+deterministic transition
+```
+
+and:
+
+```text
+probabilistic transition
+```
+
+must be explicitly distinguished.
+
+---
+
+# 34. Randomness
+
+Probabilistic operations should expose:
+
+```text
+seed
+source
+distribution
+sampling method
+```
+
+when available.
+
+This permits:
+
+* replay;
+* benchmarking;
+* debugging;
+* comparison;
+* verification.
+
+---
+
+# 35. Thought Scheduling
+
+Thought must not own CPU scheduling.
+
+Anima CK owns computational scheduling.
+
+Thought should emit cognitive requirements:
+
+```text
+priority
+deadline
+attention
+estimated_cost
+required_capabilities
+risk
+expected_information_gain
+```
+
+Anima CK converts those into actual inference scheduling.
+
+---
+
+# 36. Cognitive Resource Allocation
+
+Thought should be resource-aware.
+
+Example:
+
+```text
+Question A:
+    confidence 0.97
+    cost 1 ms
+
+Question B:
+    confidence 0.52
+    cost 20 seconds
+    high consequence
+
+Question C:
+    confidence 0.80
+    cost 2 ms
+```
+
+The cognitive system should not automatically spend maximum compute on every problem.
+
+Instead:
+
+```text
+expected value of additional cognition
+```
+
+should influence escalation.
+
+---
+
+# 37. Information Gain
+
+Thought should expose information gain as a first-class concept.
+
+For an uncertain problem:
+
+```text
+candidate investigation
+      ↓
+expected uncertainty reduction
+      ↓
+cost
+      ↓
+risk
+```
+
+Then:
+
+```text
+investigate if:
+
+expected_information_gain
+>
+investigation_cost
+```
+
+The exact decision belongs to Intellect/Eve.
+
+Thought supplies the cognitive context.
+
+---
+
+# 38. Human-in-the-Loop
+
+Humans should be a first-class cognitive provider.
+
+The system should support:
+
+```text
+Thought
+   ↓
+uncertainty
+   ↓
+human escalation
+   ↓
+human answer
+   ↓
+belief update
+```
+
+This is especially important for high-risk applications.
+
+Human decisions should carry:
+
+```text
+source = Human
+identity
+timestamp
+context
+confidence (optional)
+```
+
+---
+
+# 39. Multi-Agent Thought
+
+A Thought should be transferable or collaboratively examinable.
+
+Example:
+
+```text
+Agent A
+   ↓
+Thought T
+   ↓
+broadcast
+   ├── Agent B
+   ├── Agent C
+   └── Agent D
+   ↓
+independent evaluations
+   ↓
+Intellect ensemble
+   ↓
+merged result
+```
+
+Anima INP provides the communication/negotiation substrate.
+
+Thought provides the cognitive object.
+
+---
+
+# 40. Thought Ownership
+
+Thoughts must have explicit ownership.
+
+Possible states:
+
+```text
+private
+shared
+delegated
+published
+archived
+```
+
+Identity and permissions should be delegated to Anima ZKPA.
+
+---
+
+# 41. Security
+
+Thought must treat cognitive state as potentially sensitive.
+
+Threats include:
+
+* malicious memory injection;
+* prompt injection;
+* thought manipulation;
+* false provenance;
+* fabricated observations;
+* replay attacks;
+* identity substitution;
+* contaminated knowledge;
+* malicious cognitive loops.
+
+The repository should provide:
+
+```text
+trusted provenance
+source classification
+integrity metadata
+capability restrictions
+thought sandboxing
+loop detection
+resource limits
+```
+
+Anima ZKPA supplies identity and attestation.
+
+---
+
+# 42. Thought Sandboxing
+
+Anima already has a `ThoughtBubble` sandbox associated with the Cognitive Kernel.
+
+That concept should become the execution boundary for experimental/private cognition.
+
+A ThoughtBubble should permit:
+
+```text
+temporary memory
+temporary hypotheses
+temporary tools
+temporary branches
+temporary models
+```
+
+without automatically contaminating durable cognitive state.
+
+This is extremely important.
+
+A thought should not become a belief merely because it was considered.
+
+---
+
+# 43. Belief Promotion
+
+A thought should progress through:
+
+```text
+thought
+   ↓
+hypothesis
+   ↓
+supported hypothesis
+   ↓
+belief candidate
+   ↓
+belief
+```
+
+Promotion criteria should be configurable.
+
+Possible evidence:
+
+* repeated observation;
+* formal proof;
+* causal experiment;
+* high-confidence intelligence;
+* independent model agreement;
+* human confirmation.
+
+---
+
+# 44. Belief Demotion
+
+The inverse must also exist:
+
+```text
+belief
+   ↓
+contradictory evidence
+   ↓
+confidence reduction
+   ↓
+belief candidate
+   ↓
+hypothesis
+   ↓
+rejected
+```
+
+This prevents knowledge from becoming permanently frozen.
+
+---
+
+# 45. Integration with Eve
+
+Eve should remain responsible for:
+
+### Neural pattern layer
+
+Extract:
+
+```text
+facts
+entities
+relations
+patterns
+```
+
+### Symbolic reasoning
+
+Provide:
+
+```text
+rules
+deduction
+consistency
+working-memory reasoning
+```
+
+### Causal reasoning
+
+Provide:
+
+```text
+causal graphs
+interventions
+counterfactuals
+effect estimation
+```
+
+### Abstraction
+
+Provide:
+
+```text
+patterns
+analogies
+cross-domain transfer
+generalisation
+```
+
+### Active learning
+
+Provide:
+
+```text
+hypothesis generation
+experiment design
+belief updating
+```
+
+### Metacognition
+
+Provide:
+
+```text
+confidence
+knowledge gaps
+learning priorities
+```
+
+These capabilities already exist in the current Eve architecture.
+
+Thought should orchestrate them.
+
+---
+
+# 46. Eve Interface
+
+TPT Thought should call Eve through an abstract interface.
+
+Conceptually:
+
+```rust
+pub trait DeliberationEngine {
+    async fn reason(
+        &self,
+        context: DeliberationContext,
+    ) -> DeliberationResult;
+
+    async fn investigate(
+        &self,
+        question: Investigation,
+    ) -> InvestigationResult;
+
+    async fn reflect(
+        &self,
+        thought: ThoughtSnapshot,
+    ) -> ReflectionResult;
+}
+```
+
+Eve implements this interface.
+
+Thought must not depend on individual Eve internal crates where avoidable.
+
+---
+
+# 47. Integration with Anima
+
+Anima remains responsible for:
+
+```text
+persistent memory
+attention
+identity
+agency
+communication
+resource scheduling
+workspace
+security
+```
+
+Thought should integrate with:
+
+```text
+tpt-anima-sse
+tpt-anima-inp
+tpt-anima-zkpa
+tpt-anima-ck
+```
+
+without reproducing their functionality.
+
+---
+
+# 48. Required Anima Extensions
+
+## 48.1 Global Workspace
+
+Add:
+
+```text
+tpt-anima-workspace
+```
+
+only if the functionality becomes large enough to justify a separate crate.
+
+Otherwise initially implement within CK/SSE.
+
+Responsibilities:
+
+* publish cognitive state;
+* subscribe to state;
+* broadcast attended information;
+* track active cognitive context.
+
+---
+
+## 48.2 Episodic Memory
+
+Extend SSE with:
+
+```text
+Episode
+EpisodeEvent
+EpisodeOutcome
+PredictionRecord
+ActionRecord
+```
+
+---
+
+## 48.3 Homeostatic State
+
+Add a generic internal state:
+
+```rust
+HomeostaticState {
+    compute_budget,
+    memory_pressure,
+    latency_pressure,
+    energy_budget,
+    urgency,
+    risk_level,
+    uncertainty_level,
+}
+```
+
+This affects scheduling.
+
+---
+
+## 48.4 Cognitive Circuit Breakers
+
+Extend existing circuit breakers to detect:
+
+```text
+repetition loops
+thought explosion
+hypothesis explosion
+recursive escalation
+confidence oscillation
+contradiction loops
+resource exhaustion
+```
+
+---
+
+# 49. Integration with `tpt-augur`
+
+Augur is responsible for probabilistic inference.
+
+Thought should be able to ask:
+
+```text
+What are the possible states?
+
+What is the posterior probability?
+
+How does new evidence update the belief?
+
+What uncertainty remains?
+```
+
+Thought owns the hypothesis lifecycle.
+
+Augur owns the mathematics.
+
+---
+
+# 50. Integration with `tpt-axiom`
+
+Axiom should provide:
+
+* uncertainty types;
+* validated probabilistic values;
+* formal constraints;
+* eventually provable computation.
+
+Thought should be able to mark:
+
+```text
+informal
+probabilistic
+verified
+proven
+```
+
+as distinct epistemic states.
+
+---
+
+# 51. Integration with `tpt-infer`
+
+Infer executes neural models.
+
+Thought should never care whether a neural model runs on:
+
+* CPU;
+* GPU;
+* NPU;
+* local hardware;
+* remote hardware.
+
+It asks Intellect for intelligence.
+
+Intellect may choose Infer.
+
+---
+
+# 52. Integration with `tpt-compute`
+
+Compute remains beneath cognition.
+
+Thought may expose:
+
+```text
+estimated_compute
+required_memory
+latency_budget
+```
+
+but should not implement tensor execution.
+
+---
+
+# 53. Integration with `tpt-pulse`
+
+Pulse can become the reactive signalling mechanism.
+
+Potential event stream:
+
+```text
+ObservationReceived
+AttentionChanged
+ThoughtCreated
+HypothesisGenerated
+PredictionCreated
+PredictionErrorDetected
+EscalationRequested
+DecisionReceived
+IntentionCreated
+ActionStarted
+ActionCompleted
+OutcomeReceived
+BeliefUpdated
+ThoughtConsolidated
+```
+
+Pulse can transport these events without making Thought dependent on a specific network protocol.
+
+---
+
+# 54. Integration with `tpt-cerebrum`
+
+`tpt-cerebrum` should remain a neuroscience research and modelling system.
+
+It should inform Thought's future algorithms but should not become a runtime dependency.
+
+Potential future research:
+
+```text
+biological phenomenon
+       ↓
+Cerebrum simulation/data
+       ↓
+computational hypothesis
+       ↓
+Thought experiment
+       ↓
+benchmark
+       ↓
+implementation
+```
+
+---
+
+# 55. Integration with `tpt-intellect`
+
+Intellect is the primary structured intelligence provider.
+
+Thought should use:
+
+```text
+IntelligenceRequest
+Decision<T>
+confidence
+abstention
+provenance
+capabilities
+policy
+cascades
+ensembles
+```
+
+Thought should be able to specify:
+
+```text
+required confidence
+maximum cost
+maximum latency
+risk tolerance
+acceptable providers
+required capabilities
+```
+
+Intellect then handles backend selection.
+
+---
+
+# 56. Backend Neutrality
+
+The system should deliberately support an expanding ecosystem.
+
+Initial examples:
+
+```text
+Jev
+tpt-infer
+tpt-augur
+Eve
+deterministic reference backend
+```
+
+Future examples:
+
+```text
+new structured models
+LLMs
+vision models
+audio models
+specialist models
+reinforcement learning policies
+Bayesian engines
+symbolic systems
+human providers
+remote services
+ensemble systems
+```
+
+The backend interface must remain stable even as models change rapidly.
+
+---
+
+# 57. No Vendor Lock-In
+
+No core Thought dependency should require:
+
+```text
+OpenAI
+Anthropic
+Google
+OpenRouter
+Ollama
+Jev
+Hugging Face
+specific hardware
+```
+
+Those belong in adapters.
+
+---
+
+# 58. Cognitive Provider Registry
+
+Thought should discover available cognitive capabilities through Intellect/Anima.
+
+Example:
+
+```text
+Capability:
+    classify:image
+    predict:temperature
+    reason:causal
+    generate:hypothesis
+    rank:actions
+    estimate:risk
+    detect:anomaly
+```
+
+Providers advertise:
+
+```text
+capability
+accuracy
+latency
+cost
+confidence range
+resource requirements
+modalities
+locality
+privacy
+verification level
+```
+
+---
+
+# 59. Provider Selection
+
+Selection should consider:
+
+```text
+capability match
+confidence
+cost
+latency
+risk
+privacy
+availability
+hardware
+energy
+verification
+historical calibration
+```
+
+This should primarily be delegated to Intellect.
+
+Thought supplies the cognitive objective.
+
+---
+
+# 60. Fast Path
+
+Example:
+
+```text
+Observation
+   ↓
+Thought
+   ↓
+Intellect
+   ↓
+fast specialist
+   ↓
+confidence 0.99
+   ↓
+accept
+```
+
+No unnecessary LLM invocation.
+
+---
+
+# 61. Slow Path
+
+Example:
+
+```text
+Observation
+   ↓
+Thought
+   ↓
+Intellect
+   ↓
+confidence 0.54
+   ↓
+Eve
+   ↓
+generate hypotheses
+   ↓
+Augur
+   ↓
+probability update
+   ↓
+Intellect
+   ↓
+ensemble
+   ↓
+Axiom/Telos verification
+   ↓
+decision
+```
+
+---
+
+# 62. Deep Investigation
+
+For high-value/high-risk problems:
+
+```text
+Thought
+   ↓
+identify uncertainty
+   ↓
+generate experiments
+   ↓
+select experiment
+   ↓
+execute
+   ↓
+observe
+   ↓
+update
+   ↓
+repeat
+```
+
+The loop should terminate when:
+
+```text
+confidence threshold met
+OR
+resource budget exhausted
+OR
+risk policy requires escalation
+OR
+human intervention required
+```
+
+---
+
+# 63. Cognitive Budget
+
+Every Thought should have a budget.
+
+Possible dimensions:
+
+```text
+time
+compute
+energy
+money
+memory
+number of branches
+number of model calls
+number of experiments
+```
+
+Example:
+
+```rust
+CognitiveBudget {
+    max_latency,
+    max_compute,
+    max_cost,
+    max_branches,
+    max_iterations,
+    max_external_calls,
+}
+```
+
+---
+
+# 64. Thought Collapse
+
+Branching cognition must eventually collapse.
+
+```text
+A ──┐
+B ──┼──► evaluation ──► selected hypothesis
+C ──┤
+D ──┘
+```
+
+Collapse may occur through:
+
+* probability;
+* utility;
+* evidence;
+* formal verification;
+* ensemble agreement;
+* human choice.
+
+---
+
+# 65. Cognitive Diversity
+
+The system should deliberately permit independent reasoning paths.
+
+For example:
+
+```text
+Model A
+Model B
+Symbolic reasoning
+Bayesian inference
+Causal reasoning
+Human
+```
+
+can independently evaluate a problem.
+
+Agreement is evidence.
+
+Disagreement is a cognitive event.
+
+---
+
+# 66. Disagreement Handling
+
+If providers disagree:
+
+```text
+A = 0.90
+B = 0.87
+C = 0.21
+```
+
+Thought should not simply average everything.
+
+It should ask:
+
+```text
+Why do they disagree?
+
+Do they have different assumptions?
+
+Do they use different evidence?
+
+Are they calibrated differently?
+
+Is there a missing variable?
+```
+
+Eve can investigate the disagreement.
+
+---
+
+# 67. Calibration
+
+Intellect owns provider calibration.
+
+Thought should consume calibration metadata.
+
+A nominal:
+
+```text
+confidence = 0.9
+```
+
+is not necessarily a reliable 90% probability.
+
+Thought should distinguish:
+
+```text
+raw confidence
+calibrated confidence
+empirical reliability
+```
+
+---
+
+# 68. Learning from Outcomes
+
+A provider's decision should be compared against eventual outcomes.
+
+Example:
+
+```text
+prediction = 80%
+actual = false
+```
+
+This becomes:
+
+```text
+prediction error
+```
+
+which can feed provider evaluation.
+
+Intellect owns backend calibration.
+
+Thought owns the experience.
+
+---
+
+# 69. Cognitive History
+
+A Thought should be able to answer:
+
+```text
+What happened?
+
+What did I believe?
+
+What did I predict?
+
+Why did I choose this?
+
+What evidence did I use?
+
+What alternatives did I reject?
+
+What happened afterwards?
+
+What did I learn?
+```
+
+This becomes the foundation of auditable autonomous systems.
+
+---
+
+# 70. Thought Provenance
+
+Every thought should maintain:
+
+```text
+source
+parent
+evidence
+memory
+provider
+model
+version
+reasoning path
+verification
+timestamp
+```
+
+Provenance should be machine-readable.
+
+---
+
+# 71. Explainability
+
+The system should not rely on generated explanations.
+
+Instead:
+
+```text
+structured provenance
+```
+
+should be the canonical explanation.
+
+An LLM may translate provenance into natural language for humans, but that is presentation.
+
+---
+
+# 72. Thought Serialization
+
+Thoughts should support:
+
+```text
+serde
+JSON
+CBOR
+MessagePack
+binary representation
+```
+
+where appropriate.
+
+The internal representation should remain native Rust.
+
+---
+
+# 73. Thought IDs
+
+Thought IDs should be:
+
+* globally unique;
+* cryptographically strong;
+* traceable;
+* suitable for distributed systems.
+
+Potentially:
+
+```text
+ThoughtId
+EpisodeId
+HypothesisId
+PredictionId
+IntentionId
+OutcomeId
+```
+
+---
+
+# 74. Temporal Semantics
+
+Thoughts should support:
+
+```text
+created_at
+updated_at
+observed_at
+predicted_at
+expected_at
+resolved_at
+```
+
+Temporal relationships should not be represented solely through timestamps.
+
+Events should be first-class.
+
+---
+
+# 75. Causal Semantics
+
+Thought should distinguish:
+
+```text
+A preceded B
+```
+
+from:
+
+```text
+A caused B
+```
+
+Causal claims should originate from Eve/Augur/experimentation or external evidence.
+
+Thought should store causal provenance.
+
+---
+
+# 76. Association vs Causation
+
+Associative links:
+
+```text
+A ↔ B
+```
+
+Causal links:
+
+```text
+A → B
+```
+
+must remain different types.
+
+---
+
+# 77. Analogy
+
+Thought may contain:
+
+```text
+analogical relationship
+```
+
+but Eve abstraction should determine whether the analogy is valid.
+
+---
+
+# 78. Dreams / Idle Cognition
+
+Future optional capability:
+
+```text
+low workload
+    ↓
+retrieve weakly connected memories
+    ↓
+combine
+    ↓
+generate hypotheses
+    ↓
+test internally
+    ↓
+store valuable discoveries
+```
+
+This can become an experimental "offline cognition" mode.
+
+Do not make it required for v1.
+
+---
+
+# 79. Curiosity
+
+Curiosity should be represented as a cognitive driver.
+
+Possible inputs:
+
+```text
+novelty
+uncertainty
+information gain
+contradiction
+knowledge gap
+```
+
+Thought may generate:
+
+```text
+CuriosityEvent
+```
+
+Eve decides what is worth investigating.
+
+---
+
+# 80. Emotion / Modulatory State
+
+TPT Thought should not attempt to recreate human emotions literally.
+
+Instead it may support computational modulators:
+
+```text
+urgency
+risk
+novelty
+reward
+threat
+confidence
+uncertainty
+arousal
+```
+
+These may affect:
+
+* attention;
+* learning rate;
+* exploration;
+* escalation;
+* memory consolidation.
+
+A future `tpt-value` or related repository may own deeper value modelling.
+
+---
+
+# 81. Homeostasis
+
+Anima should provide internal state.
+
+For example:
+
+```text
+compute pressure ↑
+    ↓
+prefer cheaper cognition
+
+uncertainty ↑
+    ↓
+investigation ↑
+
+risk ↑
+    ↓
+verification ↑
+
+deadline ↓
+    ↓
+escalation threshold changes
+```
+
+Thought consumes these signals.
+
+---
+
+# 82. Cognitive Modes
+
+Thought should support configurable modes.
+
+Examples:
+
+```text
+Reactive
+Deliberative
+Investigative
+Creative
+Reflective
+Planning
+Learning
+Consolidation
+Emergency
+```
+
+These are computational modes, not claims about biological brain states.
+
+---
+
+# 83. Creative Cognition
+
+Creative mode may:
+
+```text
+relax similarity constraints
+increase branching
+increase novelty
+combine distant memories
+generate analogies
+```
+
+Eve abstraction can evaluate resulting ideas.
+
+Intellect can rank them.
+
+Axiom/Telos can verify them where applicable.
+
+---
+
+# 84. Planning
+
+Thought can represent:
+
+```text
+goal
+state
+candidate plans
+predicted outcomes
+constraints
+cost
+risk
+```
+
+Eve can reason over plans.
+
+Intellect can rank plans.
+
+Anima can execute them.
+
+---
+
+# 85. Recursive Thought
+
+Thought may spawn child thoughts:
+
+```text
+Thought A
+ ├── Thought B
+ │    ├── Thought D
+ │    └── Thought E
+ └── Thought C
+```
+
+This must be bounded.
+
+Controls:
+
+```text
+max_depth
+max_children
+max_total_compute
+max_duration
+```
+
+Anima circuit breakers should terminate runaway cognition.
+
+---
+
+# 86. Thought Compression
+
+Completed thoughts should be compressible.
+
+Example:
+
+```text
+100 individual episodes
+       ↓
+pattern
+       ↓
+general rule
+```
+
+Eve abstraction performs the generalisation.
+
+Anima stores the resulting knowledge.
+
+Thought records the transition.
+
+---
+
+# 87. Memory Consolidation
+
+A consolidated thought may become:
+
+```text
+semantic knowledge
+procedural knowledge
+causal model
+heuristic
+policy
+skill
+```
+
+Promotion must preserve provenance.
+
+---
+
+# 88. Skill Formation
+
+Repeated successful thought/action loops may become a reusable skill:
+
+```text
+experience
+   ↓
+pattern
+   ↓
+reliable sequence
+   ↓
+skill
+```
+
+The skill can then be routed through Intellect as a fast provider.
+
+This creates a natural:
+
+```text
+deliberate → learned → fast
+```
+
+transition.
+
+---
+
+# 89. Cognitive Reflexes
+
+A mature system should be able to convert repeated deliberation into fast decisions.
+
+Example:
+
+```text
+100 successful deliberations
+        ↓
+learned policy
+        ↓
+specialist provider
+        ↓
+fast Intellect path
+```
+
+This is one of the strongest reasons not to permanently equate System 1 with Jev.
+
+Jev is merely one possible implementation.
+
+---
+
+# 90. Backend Evolution
+
+The architecture should support:
+
+```text
+new backend appears
+        ↓
+register capability
+        ↓
+benchmark
+        ↓
+calibrate
+        ↓
+make available
+        ↓
+Thought can automatically use it
+```
+
+No cognitive rewrite should be necessary.
+
+---
+
+# 91. Model Discovery
+
+Intellect should expose provider metadata.
+
+Thought may ask:
+
+```text
+Which providers can answer this?
+
+Which are local?
+
+Which are verified?
+
+Which are calibrated?
+
+Which are cheap?
+
+Which are fast?
+
+Which have relevant historical performance?
+```
+
+---
+
+# 92. Human Provider
+
+A human should be represented as a legitimate intelligence provider.
+
+```text
+HumanProvider
+```
+
+can return:
+
+```text
+Decision<T>
+```
+
+with provenance:
+
+```text
+source = human
+```
+
+This allows:
+
+```text
+AI
+ ↓
+uncertainty
+ ↓
+human
+ ↓
+AI learns
+```
+
+without making human intervention a special-case architectural hack.
+
+---
+
+# 93. External Provider
+
+Remote intelligence providers must be isolated behind adapters.
+
+```text
+tpt-intellect-remote
+```
+
+should handle transport.
+
+Thought should not contain HTTP/API-specific code.
+
+---
+
+# 94. Local Provider
+
+Local providers may include:
+
+```text
+tpt-infer
+tpt-spark
+Ollama
+specialist Rust models
+```
+
+Again, Thought should not know their internals.
+
+---
+
+# 95. Testing Philosophy
+
+TPT Thought requires more than unit tests.
+
+Testing should include:
+
+### Deterministic state tests
+
+```text
+same input → same transition
+```
+
+### Property tests
+
+```text
+no invalid state transitions
+```
+
+### Cognitive loop tests
+
+```text
+observe → think → act → learn
+```
+
+### Replay tests
+
+```text
+recorded episode → reproduced trajectory
+```
+
+### Adversarial tests
+
+```text
+contradictions
+false observations
+memory contamination
+provider failure
+provider disagreement
+recursive thought
+```
+
+### Resource tests
+
+```text
+bounded cognition
+```
+
+---
+
+# 96. Cognitive Benchmarks
+
+Benchmark:
+
+```text
+time-to-decision
+decision quality
+confidence calibration
+unnecessary escalation
+missed escalation
+memory utilisation
+prediction accuracy
+prediction error reduction
+branch explosion
+compute cost
+energy cost
+```
+
+---
+
+# 97. Important Metrics
+
+Potential metrics:
+
+```text
+ThoughtLatency
+ThoughtDepth
+BranchCount
+InferenceCount
+EscalationRate
+AbstentionRate
+PredictionAccuracy
+PredictionError
+BeliefRevisionRate
+MemoryRetrievalRate
+DecisionConfidence
+CalibrationError
+CognitiveCost
+InformationGain
+ActionSuccessRate
+```
+
+---
+
+# 98. Observability
+
+Thought should emit structured telemetry.
+
+Example:
+
+```text
+thought.created
+thought.attended
+thought.branch.created
+thought.hypothesis.created
+thought.prediction.created
+thought.escalated
+thought.decision.received
+thought.intention.created
+thought.action.started
+thought.action.completed
+thought.prediction.error
+thought.belief.updated
+thought.consolidated
+thought.aborted
+```
+
+Anima Observatory should eventually visualise these.
+
+---
+
+# 99. Thought Observatory
+
+Future UI should show:
+
+```text
+ACTIVE THOUGHTS
+       │
+       ├── attention
+       ├── confidence
+       ├── hypotheses
+       ├── active provider
+       ├── compute cost
+       └── state
+```
+
+and:
+
+```text
+THOUGHT GRAPH
+```
+
+with branches, evidence, contradictions and outcomes.
+
+This would become one of the best demonstrations of the entire TPT cognitive architecture.
+
+---
+
+# 100. Workspace Layout
+
+Initial repository structure:
+
+```text
+tpt-thought/
+├── crates/
+│   ├── tpt-thought/
+│   ├── tpt-thought-core/
+│   ├── tpt-thought-state/
+│   ├── tpt-thought-graph/
+│   ├── tpt-thought-attention/
+│   ├── tpt-thought-hypothesis/
+│   ├── tpt-thought-prediction/
+│   ├── tpt-thought-intention/
+│   ├── tpt-thought-loop/
+│   ├── tpt-thought-provenance/
+│   ├── tpt-thought-policy/
+│   ├── tpt-thought-integrations/
+│   └── tpt-thought-tests/
+│
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── COGNITIVE_MODEL.md
+│   ├── INTEGRATION_ANIMA.md
+│   ├── INTEGRATION_EVE.md
+│   ├── INTEGRATION_INTELLECT.md
+│   ├── PROVIDERS.md
+│   └── BENCHMARKS.md
+│
+├── examples/
+├── benches/
+├── Cargo.toml
+├── README.md
+├── spec.md
+└── todo.md
+```
+
+Do not create every crate immediately.
+
+Only create a crate when a genuine API/dependency boundary exists.
+
+---
+
+# 101. Core Crates
+
+## `tpt-thought-core`
+
+Core types:
+
+```text
+Thought
+ThoughtId
+ThoughtState
+ThoughtContent
+Observation
+Hypothesis
+Belief
+Prediction
+Intention
+Outcome
+Confidence
+Uncertainty
+```
+
+No backend dependencies.
+
+---
+
+## `tpt-thought-state`
+
+State machine.
+
+Responsible for:
+
+```text
+transition
+validation
+lifecycle
+```
+
+---
+
+## `tpt-thought-graph`
+
+Relationships between:
+
+```text
+thoughts
+hypotheses
+beliefs
+observations
+predictions
+actions
+```
+
+---
+
+## `tpt-thought-attention`
+
+Attention calculation and prioritisation.
+
+---
+
+## `tpt-thought-hypothesis`
+
+Hypothesis lifecycle and branching.
+
+---
+
+## `tpt-thought-prediction`
+
+Prediction and prediction-error handling.
+
+---
+
+## `tpt-thought-intention`
+
+Goal and action-intention structures.
+
+---
+
+## `tpt-thought-loop`
+
+The actual cognitive cycle.
+
+```text
+observe
+contextualise
+associate
+hypothesise
+evaluate
+decide
+intend
+act
+observe
+learn
+consolidate
+```
+
+---
+
+## `tpt-thought-provenance`
+
+Machine-readable cognitive provenance.
+
+---
+
+## `tpt-thought-policy`
+
+Policies for:
+
+```text
+escalation
+branching
+resource use
+risk
+human escalation
+termination
+```
+
+---
+
+# 102. Dependency Rules
+
+Core should have extremely few dependencies.
+
+Preferred:
+
+```text
+tpt-thought-core
+    ↓
+no TPT runtime dependencies
+
+tpt-thought-state
+    ↓
+core
+
+tpt-thought-graph
+    ↓
+core
+
+tpt-thought-integrations
+    ↓
+Anima / Eve / Intellect
+```
+
+Avoid:
+
+```text
+core → Anima
+core → Eve
+core → Intellect
+```
+
+This preserves reusability.
+
+---
+
+# 103. Integration Crate
+
+Create:
+
+```text
+tpt-thought-integrations
+```
+
+for optional adapters:
+
+```text
+AnimaAdapter
+EveAdapter
+IntellectAdapter
+AugurAdapter
+AxiomAdapter
+PulseAdapter
+```
+
+This prevents the core from becoming a dependency monolith.
+
+---
+
+# 104. Example Cognitive Loop
+
+```rust
+let thought = Thought::from_observation(observation);
+
+thought.attend();
+
+let memories = anima.retrieve_context(&thought).await?;
+
+thought.associate(memories);
+
+let decision = intellect
+    .evaluate(thought.question())
+    .await?;
+
+if decision.confidence() < threshold {
+    let investigation = eve
+        .investigate(&thought)
+        .await?;
+
+    thought.integrate(investigation);
+}
+
+let action = thought.select_intention()?;
+
+let outcome = execute(action).await?;
+
+thought.observe(outcome);
+
+thought.learn();
+```
+
+The actual APIs will differ.
+
+The architectural sequence is the important part.
+
+---
+
+# 105. Example Fast Path
+
+```text
+sensor
+ ↓
+Thought
+ ↓
+Anima context
+ ↓
+Intellect
+ ↓
+specialist backend
+ ↓
+confidence 0.98
+ ↓
+intention
+ ↓
+action
+```
+
+---
+
+# 106. Example Deliberative Path
+
+```text
+sensor
+ ↓
+Thought
+ ↓
+Anima memory
+ ↓
+Intellect
+ ↓
+confidence 0.48
+ ↓
+Eve
+ ↓
+hypotheses
+ ↓
+Augur
+ ↓
+probability
+ ↓
+Eve causal reasoning
+ ↓
+Intellect ensemble
+ ↓
+Axiom/Telos validation
+ ↓
+decision
+ ↓
+intention
+ ↓
+action
+```
+
+---
+
+# 107. Example Learning Path
+
+```text
+prediction
+ ↓
+action
+ ↓
+outcome
+ ↓
+prediction error
+ ↓
+Anima episodic memory
+ ↓
+Eve active learning
+ ↓
+belief update
+ ↓
+Intellect calibration
+ ↓
+future Thought
+```
+
+---
+
+# 108. Example Reflex Formation
+
+```text
+100 repeated successful decisions
+              ↓
+       stable pattern
+              ↓
+       learned policy
+              ↓
+      Intellect provider
+              ↓
+        fast execution
+```
+
+This creates a feedback loop between deliberate cognition and fast cognition.
+
+---
+
+# 109. Architecture of Cognition
+
+The complete intended TPT architecture becomes:
+
+```text
+                         WORLD
+                           │
+                           ▼
+                      PERCEPTION
+                           │
+                           ▼
+                     ┌──────────┐
+                     │  ANIMA   │
+                     │ attention│
+                     │ memory   │
+                     │ state    │
+                     └────┬─────┘
+                          │
+                          ▼
+                    ┌────────────┐
+                    │   THOUGHT  │
+                    │            │
+                    │ cognitive  │
+                    │ trajectory │
+                    └─────┬──────┘
+                          │
+              ┌───────────┼────────────┐
+              │           │            │
+              ▼           ▼            ▼
+          INTELLECT      EVE         MEMORY
+              │           │            │
+         fast/slow      reason      Anima SSE
+              │           │
+              └─────┬─────┘
+                    │
+              ┌─────┴─────┐
+              ▼           ▼
+            AUGUR       AXIOM
+          probability   certainty
+              │           │
+              └─────┬─────┘
+                    │
+                  DECIDE
+                    │
+                  INTEND
+                    │
+                  ACTION
+                    │
+                  WORLD
+                    │
+                    └──────────────► feedback
+```
+
+---
+
+# 110. The Cognitive Loop Is the Product
+
+The primary achievement of TPT Thought is not an individual algorithm.
+
+It is making this loop explicit:
+
+```text
+PERCEIVE
+   ↓
+ATTEND
+   ↓
+REMEMBER
+   ↓
+REPRESENT
+   ↓
+PREDICT
+   ↓
+HYPOTHESISE
+   ↓
+EVALUATE
+   ↓
+REASON
+   ↓
+DECIDE
+   ↓
+INTEND
+   ↓
+ACT
+   ↓
+OBSERVE
+   ↓
+COMPARE
+   ↓
+LEARN
+   ↓
+CONSOLIDATE
+   ↓
+REPEAT
+```
+
+Different systems can implement individual stages.
+
+Thought coordinates them.
+
+---
+
+# 111. What Should NOT Be Added to Thought
+
+Do not add:
+
+### A model
+
+Thought is model-neutral.
+
+### A database
+
+Anima owns memory.
+
+### An LLM client
+
+Intellect/Eve adapters handle model access.
+
+### Tensor operations
+
+Infer/Compute own these.
+
+### Probability mathematics
+
+Augur owns this.
+
+### Formal proof
+
+Axiom/Telos own this.
+
+### Network protocol
+
+Pulse/Anima own communication.
+
+### Agent identity
+
+Anima ZKPA owns identity.
+
+### Vendor-specific logic
+
+Adapters only.
+
+---
+
+# 112. Future `tpt-value`
+
+Do not create immediately unless required.
+
+Potential future repository:
+
+```text
+tpt-value
+```
+
+Responsibilities:
+
+```text
+utility
+reward
+preference
+cost
+risk
+novelty
+goal valuation
+prediction error
+reinforcement
+```
+
+Thought should already expose an interface allowing this later.
+
+---
+
+# 113. Future `tpt-planning`
+
+Planning may eventually justify its own repository if it becomes sufficiently large.
+
+Potential responsibilities:
+
+```text
+planning graphs
+search
+hierarchical planning
+temporal planning
+resource planning
+multi-agent planning
+```
+
+Initially this can remain inside Thought/Eve.
+
+---
+
+# 114. Future `tpt-consciousness`
+
+Do not create this now.
+
+"Consciousness" is not sufficiently well-defined as an engineering requirement.
+
+Implement measurable mechanisms:
+
+```text
+global workspace
+attention
+self-model
+metacognition
+persistent identity
+episodic continuity
+```
+
+without claiming that they constitute consciousness.
+
+---
+
+# 115. Relationship to `tpt-cerebrum`
+
+Cerebrum is the biological research environment.
+
+Thought is the artificial cognitive implementation.
+
+The research cycle becomes:
+
+```text
+Cerebrum
+   ↓
+biological observation
+   ↓
+computational hypothesis
+   ↓
+Thought implementation
+   ↓
+benchmark
+   ↓
+retain / reject / modify
+```
+
+This creates a principled bridge between neuroscience and TPT's artificial cognitive architecture.
+
+---
+
+# 116. Relationship to `tpt-pulse`
+
+Pulse can carry cognitive events:
+
+```text
+ThoughtCreated
+ThoughtAttended
+HypothesisCreated
+PredictionCreated
+DecisionReceived
+EscalationRequested
+ActionStarted
+ActionCompleted
+PredictionError
+BeliefUpdated
+ThoughtConsolidated
+```
+
+Pulse should remain a transport/dataflow primitive.
+
+Thought defines the meaning of these events.
+
+---
+
+# 117. Relationship to Jev and Future Models
+
+Jev is explicitly an example backend.
+
+The architecture must assume:
+
+> **The intelligence-provider landscape will change continuously.**
+
+Therefore:
+
+```text
+Thought
+   ↓
+Intellect
+   ↓
+Capability discovery
+   ↓
+Provider selection
+```
+
+rather than:
+
+```text
+Thought
+   ↓
+Jev
+```
+
+This is essential for long-term viability.
+
+---
+
+# 118. Backend Competition
+
+Multiple providers should be able to compete.
+
+Example:
+
+```text
+Question
+   │
+   ├── Provider A
+   ├── Provider B
+   ├── Provider C
+   ├── Provider D
+   └── Human
+        │
+        ▼
+    Intellect ensemble
+        │
+        ▼
+     Thought
+```
+
+Providers can be evaluated continuously.
+
+---
+
+# 119. Provider Learning
+
+The system should track:
+
+```text
+provider
+task type
+prediction
+confidence
+actual result
+calibration
+cost
+latency
+```
+
+This allows Intellect to improve provider selection over time.
+
+---
+
+# 120. Core Design Rule
+
+Never make a cognitive decision because:
+
+> "This is the model we have."
+
+Make it because:
+
+> "This is the best available cognitive mechanism under the current constraints."
+
+---
+
+# 121. Development Phases
+
+## Phase 0 — Foundation
+
+Implement:
+
+* core types;
+* state machine;
+* IDs;
+* serialization;
+* provenance.
+
+---
+
+## Phase 1 — Thought Lifecycle
+
+Implement:
+
+```text
+create
+attend
+contextualise
+associate
+complete
+```
+
+---
+
+## Phase 2 — Hypotheses
+
+Implement:
+
+```text
+branch
+evaluate
+merge
+prune
+promote
+reject
+```
+
+---
+
+## Phase 3 — Prediction
+
+Implement:
+
+```text
+prediction
+observation
+prediction error
+```
+
+---
+
+## Phase 4 — Intellect Integration
+
+Integrate:
+
+```text
+tpt-intellect
+```
+
+with:
+
+```text
+fast path
+confidence
+abstention
+escalation
+```
+
+---
+
+## Phase 5 — Eve Integration
+
+Integrate:
+
+```text
+reasoning
+causality
+abstraction
+active learning
+metacognition
+```
+
+---
+
+## Phase 6 — Anima Integration
+
+Integrate:
+
+```text
+memory
+attention
+workspace
+identity
+scheduling
+episodes
+```
+
+---
+
+## Phase 7 — Closed Loop
+
+Implement:
+
+```text
+observe
+think
+decide
+act
+observe
+learn
+```
+
+---
+
+## Phase 8 — Consolidation
+
+Implement:
+
+```text
+replay
+compression
+abstraction
+memory promotion
+forgetting
+```
+
+---
+
+## Phase 9 — Multi-Provider Cognition
+
+Implement:
+
+```text
+provider competition
+ensemble reasoning
+provider calibration
+human provider
+remote provider
+```
+
+---
+
+## Phase 10 — Cognitive Observatory
+
+Visualise:
+
+```text
+thought graph
+attention
+active hypotheses
+provider selection
+confidence
+prediction errors
+cognitive cost
+```
+
+---
+
+# 122. Acceptance Criteria
+
+TPT Thought should not be considered successful merely because it can generate an LLM response.
+
+A successful implementation must demonstrate:
+
+### A.
+
+A thought can receive an observation.
+
+### B.
+
+It can retrieve relevant memory.
+
+### C.
+
+It can create multiple hypotheses.
+
+### D.
+
+It can request structured intelligence from Intellect.
+
+### E.
+
+It can escalate uncertain decisions.
+
+### F.
+
+It can invoke Eve deliberation.
+
+### G.
+
+It can create a prediction.
+
+### H.
+
+It can execute an intention.
+
+### I.
+
+It can compare predicted and actual outcomes.
+
+### J.
+
+It can update its cognitive state.
+
+### K.
+
+It can preserve provenance.
+
+### L.
+
+The entire episode can be replayed.
+
+### M.
+
+The same architecture works with multiple intelligence providers.
+
+---
+
+# 123. Golden Demonstration
+
+The repository should eventually include a demonstration similar to:
+
+```text
+A robot sees an unfamiliar object.
+
+          ↓
+
+ANIMA
+retrieves related memories.
+
+          ↓
+
+THOUGHT
+creates hypotheses.
+
+          ↓
+
+INTELLECT
+asks fast vision providers.
+
+          ↓
+
+confidence insufficient.
+
+          ↓
+
+EVE
+generates alternative explanations.
+
+          ↓
+
+AUGUR
+updates probabilities.
+
+          ↓
+
+THOUGHT
+identifies uncertainty.
+
+          ↓
+
+INTELLECT
+selects an experiment.
+
+          ↓
+
+ANIMA
+negotiates with sensor capability.
+
+          ↓
+
+ACTION
+
+          ↓
+
+OBSERVATION
+
+          ↓
+
+PREDICTION ERROR
+
+          ↓
+
+EVE
+updates model.
+
+          ↓
+
+ANIMA
+stores episode.
+
+          ↓
+
+THOUGHT
+consolidates learning.
+```
+
+This demonstrates the architecture far better than a chatbot demo.
+
+---
+
+# 124. Final Architecture
+
+The intended TPT cognitive ecosystem is:
+
+```text
+                         ┌───────────────────┐
+                         │     WORLD         │
+                         └─────────┬─────────┘
+                                   │
+                              perception
+                                   │
+                                   ▼
+                         ┌───────────────────┐
+                         │      ANIMA        │
+                         │                   │
+                         │ memory            │
+                         │ attention         │
+                         │ state             │
+                         │ workspace         │
+                         │ identity          │
+                         │ scheduling        │
+                         └─────────┬─────────┘
+                                   │
+                                   ▼
+                         ┌───────────────────┐
+                         │     THOUGHT       │
+                         │                   │
+                         │ cognitive process │
+                         │ hypotheses        │
+                         │ predictions       │
+                         │ intentions        │
+                         │ cognitive loop    │
+                         └─────────┬─────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    │              │              │
+                    ▼              ▼              ▼
+              ┌──────────┐   ┌──────────┐   ┌──────────┐
+              │INTELLECT │   │   EVE    │   │  AUGUR   │
+              │          │   │          │   │          │
+              │ decisions│   │ reasoning│   │probability│
+              │ providers│   │ learning │   │ inference │
+              └────┬─────┘   └────┬─────┘   └────┬─────┘
+                   │              │              │
+                   │              │              │
+              ┌────┴──────────────┴──────────────┴────┐
+              │                                         │
+              ▼                                         ▼
+        ┌────────────┐                           ┌────────────┐
+        │   AXIOM    │                           │   INFER    │
+        │ uncertainty│                           │ neural     │
+        │ verification│                          │ execution  │
+        └─────┬──────┘                           └─────┬──────┘
+              │                                        │
+              └────────────────┬───────────────────────┘
+                               ▼
+                        ┌─────────────┐
+                        │   COMPUTE   │
+                        └──────┬──────┘
+                               │
+                         CPU/GPU/NPU
+                               │
+                               ▼
+                             ACTION
+                               │
+                               └──────────────► WORLD
+```
+
+---
+
+# 125. The Fundamental TPT Cognitive Model
+
+The long-term objective is not to reproduce the human brain neuron-for-neuron.
+
+It is to construct a **functional artificial cognitive architecture** in which:
+
+```text
+memory
+attention
+prediction
+probability
+reasoning
+abstraction
+uncertainty
+verification
+decision
+action
+learning
+and reflection
+```
+
+are separate, composable computational primitives.
+
+The most important separation is:
+
+```text
+ANIMA
+    = cognitive substrate
+
+THOUGHT
+    = cognitive process
+
+EVE
+    = deliberate reasoning and learning
+
+INTELLECT
+    = structured intelligence
+
+AUGUR
+    = probabilistic inference
+
+AXIOM
+    = uncertainty and formal guarantees
+
+INFER
+    = neural model execution
+
+COMPUTE
+    = numerical execution
+
+PULSE
+    = reactive signalling
+
+CEREBRUM
+    = neuroscience research
+```
+
+No single component is "the brain."
+
+The architecture emerges from their interaction.
+
+---
+
+# 126. Design Principle to Preserve
+
+The entire system should follow one rule:
+
+> **Do not ask a model to perform a function that a smaller, more deterministic, more verifiable computational primitive can perform.**
+
+Conversely:
+
+> **Do not force deterministic machinery to solve a problem that genuinely requires inference, uncertainty, abstraction or learning.**
+
+Therefore:
+
+```text
+deterministic problem
+        ↓
+deterministic machinery
+
+probabilistic problem
+        ↓
+probabilistic machinery
+
+learned problem
+        ↓
+learned intelligence
+
+uncertain problem
+        ↓
+uncertainty-aware reasoning
+
+complex cognitive problem
+        ↓
+Thought + Eve + Intellect + Anima
+```
+
+This separation is the foundation of the TPT cognitive architecture.
+
+---
+
+# 127. Long-Term Vision
+
+The eventual TPT system should be able to operate as:
+
+```text
+observe
+   ↓
+remember
+   ↓
+think
+   ↓
+predict
+   ↓
+reason
+   ↓
+decide
+   ↓
+act
+   ↓
+observe consequences
+   ↓
+learn
+   ↓
+remember
+   ↓
+think again
+```
+
+with the system continuously choosing the **least expensive cognitive mechanism capable of reliably solving the current problem**, escalating to deeper reasoning only when necessary.
+
+The architecture should therefore become increasingly capable without becoming increasingly dependent on one model.
+
+That is the fundamental purpose of `tpt-thought`.
+
+
+
+
+
+
+
+sleep and reflection should be explicit parts of the architecture, not just implied by tpt-eve metacognition or tpt-anima scheduling.
+
+I’d make them first-class concepts in tpt-thought:
+
+Reflection = deliberate examination of recent thoughts, decisions, errors, uncertainty, goals, and outcomes while the system is still operating.
+Sleep = offline/low-priority consolidation where the system can reorganise knowledge without an active task competing for the workspace.
+
+That gives the cognitive loop something closer to:
+
+Perception → Thought → Action → Outcome → Reflection → Sleep/Consolidation → Updated capability → Thought
+
+Where they belong
+
+tpt-thought
+
+ReflectionEngine
+ReflectionTrigger
+ReflectionSession
+CognitiveReview
+SleepCycle
+ConsolidationPlan
+ThoughtReplay
+MemoryReorganisation
+BeliefRevision
+KnowledgeGapAnalysis
+StrategyUpdate
+
+tpt-eve
+
+Supplies the actual reasoning mechanisms used during reflection:
+metacognition
+contradiction detection
+causal analysis
+abstraction
+hypothesis generation
+active-learning proposals
+confidence/belief revision
+Eve should perform reasoning over the material, but tpt-thought should decide when, why, and what to reflect on.
+
+tpt-anima
+
+CK schedules sleep cycles when resources permit.
+SSE provides persistent memory and receives consolidated results.
+Observatory records the cycle.
+Circuit breakers prevent runaway reflection/reprocessing.
+I would actually distinguish three modes
+Mode	Purpose	Typical behaviour
+Online Thought	Solve current problem	Fast, focused, resource constrained
+Reflection	Understand recent experience	Review decisions, errors, uncertainty and outcomes
+Sleep	Reorganise accumulated knowledge	Replay, consolidate, abstract, prune, recalibrate
+
+And importantly, sleep shouldn't just mean "run the same reasoning more slowly."
+
+It can perform operations that aren't appropriate during an active task:
+
+Replay important episodes.
+Identify repeated mistakes.
+Merge redundant memories.
+Strengthen useful causal relationships.
+Weaken stale or poorly supported associations.
+Convert episodic experiences into abstractions.
+Re-evaluate uncertain beliefs with accumulated evidence.
+Identify persistent knowledge gaps.
+Generate experiments for future active learning.
+Recalibrate confidence.
+Compress thought histories into durable summaries.
+Detect recurring strategies that work or fail.
+Update retrieval/salience priorities.
+Produce a next-session cognitive state.
+There's another important distinction
+
+I wouldn't make reflection = chain-of-thought.
+
+The system should maintain structured artifacts such as:
+
+Decision
+Evidence
+Outcome
+Prediction
+Prediction error
+Confidence
+Contradiction
+Causal explanation
+Knowledge gap
+Strategy adjustment
+Memory update
+
+rather than requiring storage or exposure of a model's private chain-of-thought.
+
+That also fits extremely well with your existing provenance + verification + formal reasoning direction.
+
+And I think this changes the tpt-thought design slightly
+
+I'd add a dedicated subsystem:
+
+tpt-thought
+│
+├── Core
+├── Graph
+├── Workspace
+├── Attention
+├── Control
+├── Inference
+├── Encoding / Transport
+├── Reflection
+│   ├── Review
+│   ├── Metacognition
+│   ├── ErrorAnalysis
+│   └── StrategyRevision
+├── Sleep
+│   ├── Replay
+│   ├── Consolidation
+│   ├── Abstraction
+│   ├── BeliefRevision
+│   ├── Pruning
+│   └── Recalibration
+└── Tests
+
+I would also make sleep a lifecycle state of the cognitive system, rather than merely a scheduled background task.
+
+That means tpt-anima can say:
+
+ACTIVE
+  ↓
+IDLE
+  ↓
+REFLECTION
+  ↓
+SLEEP
+  ↓
+CONSOLIDATION
+  ↓
+AWAKE
+
+with the ability to interrupt sleep if a high-priority external event arrives.
+
+So yes: we missed it in the previous spec, and I'd consider it an architectural omission worth fixing. It actually makes tpt-thought considerably more coherent as the cognitive process layer sitting between Eve/Intellect and Anima.
