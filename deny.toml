@@ -1,0 +1,48 @@
+# cargo-deny configuration. See https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+all-features = true
+
+[licenses]
+# MIT-compatible allow-list. Apache-2.0-only crates are deliberately NOT listed;
+# a crate passes only if its SPDX expression can be satisfied by an allowed licence
+# (e.g. "MIT OR Apache-2.0" passes through MIT).
+allow = [
+    "MIT",
+    "BlueOak-1.0.0", # permissive, OSI-approved; used by minicbor (CBOR encoding)
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unlicense",
+    "CC0-1.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Vendor SDK crates must never be dependencies (spec §57); adapters live behind provider traits.
+deny = [
+    { crate = "async-openai" },
+    { crate = "openai" },
+    { crate = "openai-api-rs" },
+    { crate = "anthropic" },
+    { crate = "ollama-rs" },
+    { crate = "google-generative-ai-rs" },
+    { crate = "hf-hub" },
+    { crate = "tokio" },
+]
+
+[advisories]
+version = 2
+ignore = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# Sibling TPT repos (only consumed by tpt-thought-integrations):
+allow-git = ["https://github.com/TPT-Solutions"]

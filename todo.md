@@ -15,52 +15,52 @@ Ground rules (apply to every phase)
 ---
 
 ## Phase A — Repository Setup & Licensing
-- [ ] `git init`, `.gitignore`, default branch, initial commit
-- [ ] Cargo workspace `Cargo.toml` (resolver 2, shared package metadata, edition, MSRV)
-- [ ] Add `LICENSE-MIT` (copyright TPT Solutions)
-- [ ] Add `LICENSE-APACHE` (Apache-2.0 text)
-- [ ] Set `license = "MIT OR Apache-2.0"` and `authors/repository` for every crate
-- [ ] SPDX header (`MIT OR Apache-2.0`) convention for source files
-- [ ] `cargo-deny` config (`deny.toml`): allow-list of MIT-compatible licences, deny Apache-2.0-only, ban vendor SDK crates (§57)
-- [ ] `rustfmt.toml`, `clippy` settings (`-D warnings`), `#![forbid(unsafe_code)]` policy
-- [ ] CI: build, test, clippy, fmt, cargo-deny, docs build (Windows + Linux)
+- [x] `git init`, `.gitignore`, default branch, initial commit
+- [x] Cargo workspace `Cargo.toml` (resolver 2, shared package metadata, edition, MSRV)
+- [x] Add `LICENSE-MIT` (copyright TPT Solutions)
+- [x] Add `LICENSE-APACHE` (Apache-2.0 text)
+- [x] Set `license = "MIT OR Apache-2.0"` and `authors/repository` for every crate
+- [x] SPDX header (`MIT OR Apache-2.0`) convention for source files
+- [x] `cargo-deny` config (`deny.toml`): allow-list of MIT-compatible licences, deny Apache-2.0-only, ban vendor SDK crates (§57)
+- [x] `rustfmt.toml`, `clippy` settings (`-D warnings`), `#![forbid(unsafe_code)]` policy
+- [x] CI workflow written (not yet run on GitHub): build, test, clippy, fmt, cargo-deny, docs build (Windows + Linux)
 - [ ] Decide git auth for sibling-repo git deps in CI
-- [ ] `README.md` (what Thought is, and what it is not, §1)
-- [ ] `CONTRIBUTING.md` (contributions licensed MIT OR Apache-2.0)
-- [ ] `docs/` skeleton: ARCHITECTURE, COGNITIVE_MODEL, INTEGRATION_ANIMA, INTEGRATION_EVE, INTEGRATION_INTELLECT, PROVIDERS, BENCHMARKS
-- [ ] `examples/` and `benches/` directories
-- [ ] Facade crate `tpt-thought` re-exporting public API
-- [ ] Dependency policy doc: what core may and may not depend on
+- [x] `README.md` (what Thought is, and what it is not, §1)
+- [x] `CONTRIBUTING.md` (contributions licensed MIT OR Apache-2.0)
+- [x] `docs/` skeleton: ARCHITECTURE, COGNITIVE_MODEL, INTEGRATION_ANIMA, INTEGRATION_EVE, INTEGRATION_INTELLECT, PROVIDERS, BENCHMARKS
+- [x] `examples/` and `benches/` directories
+- [x] Facade crate `tpt-thought` re-exporting public API
+- [x] Dependency policy doc: what core may and may not depend on
 
 ## Phase 0 — Foundation (core types, state machine, IDs, serialization, provenance)
-- [ ] Create `tpt-thought-core`
-- [ ] IDs: `ThoughtId`, `EpisodeId`, `HypothesisId`, `PredictionId`, `IntentionId`, `OutcomeId` (globally unique, cryptographically strong, traceable, §73)
-- [ ] ID generation without a mandatory runtime (injectable entropy source for deterministic tests)
-- [ ] Temporal types: `created_at`, `updated_at`, `observed_at`, `predicted_at`, `expected_at`, `resolved_at`; events as first-class (§74)
-- [ ] Injectable clock for deterministic replay
-- [ ] `Thought` struct (§8), kept loosely coupled (not mandatory final shape)
-- [ ] `ThoughtOrigin`, `ThoughtContext`, `ThoughtOwnership` (private/shared/delegated/published/archived, §40)
-- [ ] `ThoughtContent` enum: Text, Structured, Observation, Hypothesis, Belief, Prediction, Question, Intention, Decision, Multimodal, Reference (§9)
-- [ ] `Observation`, `Belief`, `Question`, `Decision` shell types
-- [ ] `Confidence` types: raw, calibrated, empirical reliability (§67)
-- [ ] `Uncertainty` types: confidence, probability, epistemic, aleatoric, unknown, contradiction, abstention (§30)
-- [ ] Epistemic status markers: informal, probabilistic, verified, proven (§50)
-- [ ] `ValueAssessment` (§22) with extension point for future `tpt-value`
-- [ ] `CognitiveBudget` struct (§63)
-- [ ] Transition kind marker: deterministic vs probabilistic (§33)
-- [ ] Randomness metadata: seed, source, distribution, sampling method (§34)
-- [ ] Create `tpt-thought-state`: lifecycle enum (CREATED … COMPLETE, §7) with loops permitted
-- [ ] Transition table + validation (illegal transitions rejected)
-- [ ] Deterministic transition function (same input, same transition)
-- [ ] serde support for all core types
-- [ ] JSON encoding
-- [ ] CBOR encoding (deterministic form)
-- [ ] Round-trip and schema-stability tests, with a versioned wire format
-- [ ] Create `tpt-thought-provenance`: machine-readable provenance record (source, parent, evidence, memory, provider, model, version, reasoning path, verification, timestamp, §70)
-- [ ] Provenance chain/tree query API ("why did the agent think this?", §31)
-- [ ] Integrity metadata (hashes) on provenance records
-- [ ] Property tests: no invalid state transitions
-- [ ] Docs: COGNITIVE_MODEL.md first draft
+- [x] Create `tpt-thought-core`
+- [x] IDs: `ThoughtId`, `EpisodeId`, `HypothesisId`, `PredictionId`, `IntentionId`, `OutcomeId` (globally unique, cryptographically strong, traceable, §73)
+- [x] ID generation without a mandatory runtime (injectable entropy source for deterministic tests)
+- [x] Temporal types: `created_at`, `updated_at`, `observed_at`, `predicted_at`, `expected_at`, `resolved_at`; events as first-class (§74)
+- [x] Injectable clock for deterministic replay
+- [x] `Thought` struct (§8), kept loosely coupled (not mandatory final shape)
+- [x] `ThoughtOrigin`, `ThoughtContext`, `ThoughtOwnership` (private/shared/delegated/published/archived, §40)
+- [x] `ThoughtContent` enum: Text, Structured, Observation, Hypothesis, Belief, Prediction, Question, Intention, Decision, Multimodal, Reference (§9)
+- [x] `Observation`, `Belief`, `Question`, `Decision` shell types
+- [x] `Confidence` types: raw, calibrated, empirical reliability (§67)
+- [x] `Uncertainty` types: confidence, probability, epistemic, aleatoric, unknown, contradiction, abstention (§30)
+- [x] Epistemic status markers: informal, probabilistic, verified, proven (§50)
+- [x] `ValueAssessment` (§22) with extension point for future `tpt-value`
+- [x] `CognitiveBudget` struct (§63)
+- [x] Transition kind marker: deterministic vs probabilistic (§33)
+- [x] Randomness metadata: seed, source, distribution, sampling method (§34)
+- [x] Create `tpt-thought-state`: lifecycle enum (CREATED … COMPLETE, §7) with loops permitted
+- [x] Transition table + validation (illegal transitions rejected)
+- [x] Deterministic transition function (same input, same transition)
+- [x] serde support for all core types
+- [x] JSON encoding
+- [x] CBOR encoding (deterministic form)
+- [x] Round-trip and schema-stability tests, with a versioned wire format
+- [x] Create `tpt-thought-provenance`: machine-readable provenance record (source, parent, evidence, memory, provider, model, version, reasoning path, verification, timestamp, §70)
+- [x] Provenance chain/tree query API ("why did the agent think this?", §31)
+- [x] Integrity metadata (hashes) on provenance records
+- [x] Property tests: no invalid state transitions
+- [x] Docs: COGNITIVE_MODEL.md first draft
 
 ## Phase 1 — Thought Lifecycle
 - [ ] Thought lifecycle API: create, attend, contextualise, associate, complete (§121)

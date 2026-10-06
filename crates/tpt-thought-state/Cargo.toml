@@ -1,0 +1,19 @@
+[package]
+name = "tpt-thought-state"
+description = "Thought lifecycle state machine for TPT Thought: transition table and validation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+tpt-thought-core = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+
+[lints]
+workspace = true

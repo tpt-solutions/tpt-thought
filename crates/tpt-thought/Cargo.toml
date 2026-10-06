@@ -1,0 +1,18 @@
+[package]
+name = "tpt-thought"
+description = "TPT Thought: cognitive process and thought representation (facade crate)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+tpt-thought-core = { workspace = true }
+tpt-thought-state = { workspace = true }
+tpt-thought-provenance = { workspace = true }
+
+[lints]
+workspace = true
