@@ -111,7 +111,7 @@ Ground rules (apply to every phase)
 - [x] Escalation levels L0 to L6 (reflex to human), configurable (§20)
 - [x] Expected value of additional cognition drives escalation (§36)
 - [x] Cognitive Budget enforcement (time, compute, energy, money, memory, branches, model calls, experiments, §63)
-- [ ] Create `tpt-thought-integrations`
+- [x] Create `tpt-thought-integrations`
 - [x] Review the `tpt-intellect` public API (github.com/TPT-Solutions/tpt-intellect)
 - [ ] `IntellectAdapter`: map Thought questions to `IntelligenceRequest`, `Decision<T>`
 - [x] Request constraints: required confidence, max cost, max latency, risk tolerance, acceptable providers, required capabilities (§55)
@@ -129,11 +129,11 @@ Ground rules (apply to every phase)
 - [x] Review `tpt-eve` public API (github.com/TPT-Solutions/tpt-eve)
 - [ ] `EveAdapter` implementing `DeliberationEngine` without depending on Eve internal crates where avoidable
 - [x] Metacognition consumption: certainty, gaps, assumptions, missing evidence, should-continue/act/ask-for-help (§19)
-- [ ] Hypothesis generation via Eve
+- [x] Hypothesis generation via Eve
 - [ ] Contradiction analysis via Eve symbolic/causal reasoning
 - [ ] Causal reasoning (interventions, counterfactuals, effect estimation)
-- [ ] Abstraction and analogy validation (§77)
-- [ ] Active learning and experiment design
+- [x] Abstraction and analogy validation (§77)
+- [x] Active learning and experiment design
 - [x] Slow path implemented: Intellect, then Eve, then Augur, then Intellect re-evaluation (§61)
 - [x] Deep investigation loop with termination (confidence met / budget exhausted / risk policy / human needed, §62)
 - [x] Mock `DeliberationEngine` for tests
@@ -307,10 +307,14 @@ Models · databases · LLM clients · tensor ops · probability maths · formal 
 
 ---
 
-## Blocked (open items that need a decision or a dependency)
-- **Integrations crate (`tpt-thought-integrations`)**: adapters for Intellect, Eve, Anima, Augur and Axiom are not built. Building them means pulling sibling-repo code (`github.com/TPT-Solutions`) in as git dependencies, which the auto-mode classifier refused. Needs an explicit decision to allow that. Every item that depends on a real sibling adapter is open for this reason, including the Eve, Anima, Augur and Intellect items and the Anima criteria D, F and H.
-- **Pulse**: no event stream exists in `tpt-pulse`; only synchronous session-typed channels. The Pulse adapter item stays open.
-- **Anima gaps**: no `retrieve_context`, episode persistence, global workspace or ZKPA identity type. Those integration items stay open.
-- **Augur gaps**: no evidence-update or residual-uncertainty API.
+---
+
+## Blocked and partial (open items)
+- **Axiom adapter**: the `tpt-axiom` repository's root `Cargo.toml` is a template with an invalid package name, so cargo cannot resolve it. Not built; needs a fix in the sibling repo.
+- **Pulse**: no event stream exists in `tpt-pulse`, only synchronous session-typed channels.
+- **Anima**: no `retrieve_context`, episode persistence, global workspace or ZKPA identity type. The broadcast adapter covers provider discovery only.
+- **Eve**: no contradiction-analysis or query-ranking API that is tokio-free. Causal interventions and counterfactuals are unsupported by the adapter.
+- **Augur**: no evidence-update or residual-uncertainty API. Residual uncertainty is derived from posterior summaries.
+- **Golden scenario against real sibling adapters**: not written yet.
 - **Observatory UI**: belongs to Anima Observatory, out of scope for Thought.
-- **Release tag**: `v0.1.0` needs a commit first; not created.
+- **Release tag `v0.1.0`**: needs a commit first; not created.
