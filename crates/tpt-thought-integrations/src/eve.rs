@@ -6,10 +6,8 @@
 //! relations that Thought supplies. Eve has no single deliberation entry point, so each Thought
 //! capability maps onto one layer. Capabilities with no Eve counterpart keep the trait's
 //! `Unsupported` default: reasoning, investigation, contradiction analysis and query ranking.
-//! Causal interventions and counterfactuals are also left unsupported, because they need Eve's
-//! intervention and counterfactual request types, which this adapter does not construct yet.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use tpt_eve_abstraction::AbstractionEngine;
 use tpt_eve_active_learning::{ActiveLearningEngine, Hypothesis as EveHypothesis};
@@ -37,6 +35,8 @@ pub struct EveAdapter {
     causal: CausalReasoningEngine,
     abstraction: AbstractionEngine,
     hypotheses: Vec<(HypothesisId, EveHypothesis)>,
+    baseline: HashMap<String, f64>,
+    effects: HashSet<String>,
 }
 
 impl EveAdapter {
@@ -49,6 +49,8 @@ impl EveAdapter {
             causal: CausalReasoningEngine::new(),
             abstraction: AbstractionEngine::new(),
             hypotheses: Vec::new(),
+            baseline: HashMap::new(),
+            effects: HashSet::new(),
         }
     }
 
@@ -66,7 +68,8 @@ impl EveAdapter {
     /// Record one observation of named numeric variables for causal fitting.
     pub fn observe(&mut self, variables: HashMap<String, f64>) {
         self.causal
-            .add_observation(tpt_eve_causal::Observation::new(variables));
+            .add_observation(tpt_eve_causal::Observation::new(variables.clone()));
+        self.baseline = variables;
     }
 
     /// Declare that `cause` affects `effect`. Call [`EveAdapter::fit`] after relating and
@@ -77,6 +80,7 @@ impl EveAdapter {
             effect: effect.into(),
             relation: CausalRelationKind::Causes,
         });
+        self.effects.insert(effect.to_string());
     }
 
     /// Fit the causal model to the relations and observations supplied so far.
@@ -161,20 +165,75 @@ impl DeliberationEngine for EveAdapter {
         _ctx: &DeliberationContext,
         request: &CausalRequest,
     ) -> Result<CausalAnalysis, DeliberationError> {
-        match request.query {
-            CausalQuery::EffectEstimate => {}
-            _ => return Err(DeliberationError::Unsupported(Capability::CausalReasoning)),
+        match &request.query {
+            CausalQuery::EffectEstimate => {
+                let estimate = self
+                    .causal
+                    .estimate_causal_effect(&request.cause, &request.effect)
+                    .map_err(|e| DeliberationError::Failed(e.to_string()))?;
+                Ok(CausalAnalysis {
+                    claim: format!("{} causes {}", request.cause, request.effect),
+                    effect_estimate: Some(estimate),
+                    confidence: Confidence::UNKNOWN,
+                    assumptions: fitted_model_assumptions(),
+                })
+            }
+            CausalQuery::Intervention { action } => {
+                self.require_baseline()?;
+                let assignments = parse_assignments(action)?;
+                let [(variable, value)] = assignments.as_slice() else {
+                    return Err(DeliberationError::Failed(
+                        "an intervention sets exactly one variable".into(),
+                    ));
+                };
+                let prediction = self
+                    .causal
+                    .predict_intervention(
+                        tpt_eve_causal::Intervention::new(variable.clone(), *value),
+                        &request.effect,
+                        &self.root_values(),
+                    )
+                    .map_err(|e| DeliberationError::Failed(e.to_string()))?;
+                Ok(CausalAnalysis {
+                    claim: format!(
+                        "do({variable}={value}) gives {} = {:.4}",
+                        request.effect, prediction.expected_value
+                    ),
+                    effect_estimate: Some(prediction.expected_value),
+                    confidence: causal_confidence(prediction.confidence),
+                    assumptions: fitted_model_assumptions(),
+                })
+            }
+            CausalQuery::Counterfactual { condition } => {
+                self.require_baseline()?;
+                let changes: HashMap<String, f64> =
+                    parse_assignments(condition)?.into_iter().collect();
+                let simulation = self
+                    .causal
+                    .simulate_counterfactual(tpt_eve_causal::Counterfactual::new(
+                        self.baseline.clone(),
+                        changes,
+                    ))
+                    .map_err(|e| DeliberationError::Failed(e.to_string()))?;
+                let effect = simulation
+                    .counterfactual_world
+                    .get(&request.effect)
+                    .copied()
+                    .ok_or_else(|| {
+                        DeliberationError::Failed(format!(
+                            "'{}' is not in the counterfactual world",
+                            request.effect
+                        ))
+                    })?;
+                Ok(CausalAnalysis {
+                    claim: format!("if {condition}, then {} = {effect:.4}", request.effect),
+                    effect_estimate: Some(effect),
+                    confidence: Confidence::UNKNOWN,
+                    assumptions: fitted_model_assumptions(),
+                })
+            }
+            _ => Err(DeliberationError::Unsupported(Capability::CausalReasoning)),
         }
-        let estimate = self
-            .causal
-            .estimate_causal_effect(&request.cause, &request.effect)
-            .map_err(|e| DeliberationError::Failed(e.to_string()))?;
-        Ok(CausalAnalysis {
-            claim: format!("{} causes {}", request.cause, request.effect),
-            effect_estimate: Some(estimate),
-            confidence: Confidence::UNKNOWN,
-            assumptions: vec!["causal model as fitted by tpt-eve-causal".into()],
-        })
     }
 
     fn validate_abstraction(
@@ -239,6 +298,59 @@ impl DeliberationEngine for EveAdapter {
     }
 }
 
+impl EveAdapter {
+    /// The observed values of root variables only: those no relation declares as an effect.
+    /// Eve seeds its propagation with the whole baseline, so an observed effect would be carried
+    /// through unchanged instead of being predicted from the intervention.
+    fn root_values(&self) -> HashMap<String, f64> {
+        self.baseline
+            .iter()
+            .filter(|(name, _)| !self.effects.contains(*name))
+            .map(|(name, value)| (name.clone(), *value))
+            .collect()
+    }
+
+    fn require_baseline(&self) -> Result<(), DeliberationError> {
+        if self.baseline.is_empty() {
+            Err(DeliberationError::Failed(
+                "no observation supplied; call observe() before asking about interventions or counterfactuals"
+                    .into(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+/// Parse `variable=value` pairs separated by commas, for example `dose=2, age=40`.
+fn parse_assignments(text: &str) -> Result<Vec<(String, f64)>, DeliberationError> {
+    text.split(',')
+        .map(|part| {
+            let (name, raw) = part.split_once('=').ok_or_else(|| {
+                DeliberationError::Failed(format!("expected variable=value, got '{part}'"))
+            })?;
+            let value: f64 = raw.trim().parse().map_err(|_| {
+                DeliberationError::Failed(format!("'{}' is not a number", raw.trim()))
+            })?;
+            Ok((name.trim().to_string(), value))
+        })
+        .collect()
+}
+
+/// Eve's intervention confidence is a rough score in `0..=1`; anything outside that is unknown.
+fn causal_confidence(value: f64) -> Confidence {
+    Probability::new(value.clamp(0.0, 1.0))
+        .ok()
+        .map_or(Confidence::UNKNOWN, Confidence::from_raw)
+}
+
+fn fitted_model_assumptions() -> Vec<String> {
+    vec![
+        "linear structural causal model fitted by tpt-eve-causal".into(),
+        "interventions use the root variables of the most recent observation".into(),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -291,20 +403,127 @@ mod tests {
         assert!((estimate - 2.0).abs() < 0.5, "estimate was {estimate}");
     }
 
+    /// A linear dose-response model (response = 2 * dose) fitted from 20 observations, with the
+    /// most recent observation at dose 10.
+    fn fitted_dose_response(seed: u64) -> EveAdapter {
+        let mut eve = EveAdapter::new(seed);
+        eve.relate("dose", "response");
+        for i in 0..20 {
+            let dose = f64::from(i);
+            let mut vars = HashMap::new();
+            vars.insert("dose".to_string(), dose);
+            vars.insert("response".to_string(), 2.0 * dose);
+            eve.observe(vars);
+        }
+        let mut latest = HashMap::new();
+        latest.insert("dose".to_string(), 10.0);
+        latest.insert("response".to_string(), 20.0);
+        eve.observe(latest);
+        eve.fit();
+        eve
+    }
+
+    fn causal(cause: &str, effect: &str, query: CausalQuery) -> CausalRequest {
+        CausalRequest {
+            cause: cause.into(),
+            effect: effect.into(),
+            query,
+        }
+    }
+
     #[test]
-    fn interventions_are_reported_unsupported() {
-        let mut eve = EveAdapter::new(3);
-        let request = CausalRequest {
-            cause: "dose".into(),
-            effect: "response".into(),
-            query: CausalQuery::Intervention {
-                action: "raise".into(),
-            },
-        };
-        assert_eq!(
-            eve.analyse_causation(&context(), &request),
-            Err(DeliberationError::Unsupported(Capability::CausalReasoning))
+    fn intervention_changes_the_predicted_effect() {
+        let mut eve = fitted_dose_response(3);
+        let low = eve
+            .analyse_causation(
+                &context(),
+                &causal(
+                    "dose",
+                    "response",
+                    CausalQuery::Intervention {
+                        action: "dose=0".into(),
+                    },
+                ),
+            )
+            .unwrap()
+            .effect_estimate
+            .expect("a prediction");
+        let high = eve
+            .analyse_causation(
+                &context(),
+                &causal(
+                    "dose",
+                    "response",
+                    CausalQuery::Intervention {
+                        action: "dose=5".into(),
+                    },
+                ),
+            )
+            .unwrap()
+            .effect_estimate
+            .expect("a prediction");
+        assert!(low.abs() < 0.5, "do(dose=0) gave {low}");
+        assert!((high - 10.0).abs() < 0.5, "do(dose=5) gave {high}");
+        assert!(high > low + 5.0, "the intervention must change the effect");
+    }
+
+    #[test]
+    fn counterfactual_changes_the_simulated_effect() {
+        let mut eve = fitted_dose_response(4);
+        let analysis = eve
+            .analyse_causation(
+                &context(),
+                &causal(
+                    "dose",
+                    "response",
+                    CausalQuery::Counterfactual {
+                        condition: "dose=3".into(),
+                    },
+                ),
+            )
+            .unwrap();
+        let effect = analysis.effect_estimate.expect("a simulated effect");
+        assert!((effect - 6.0).abs() < 0.5, "counterfactual gave {effect}");
+        assert!(analysis.claim.starts_with("if dose=3"));
+    }
+
+    #[test]
+    fn interventions_need_an_observation_first() {
+        let mut eve = EveAdapter::new(5);
+        eve.relate("dose", "response");
+        eve.fit();
+        let result = eve.analyse_causation(
+            &context(),
+            &causal(
+                "dose",
+                "response",
+                CausalQuery::Intervention {
+                    action: "dose=1".into(),
+                },
+            ),
         );
+        assert!(matches!(result, Err(DeliberationError::Failed(_))));
+    }
+
+    #[test]
+    fn an_intervention_must_set_exactly_one_variable() {
+        let mut eve = fitted_dose_response(6);
+        for action in ["dose=1,age=2", "raise", "dose=high"] {
+            let result = eve.analyse_causation(
+                &context(),
+                &causal(
+                    "dose",
+                    "response",
+                    CausalQuery::Intervention {
+                        action: action.into(),
+                    },
+                ),
+            );
+            assert!(
+                matches!(result, Err(DeliberationError::Failed(_))),
+                "'{action}' should be rejected"
+            );
+        }
     }
 
     #[test]

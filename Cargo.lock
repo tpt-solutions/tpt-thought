@@ -779,10 +779,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "tpt-infer"
+version = "0.1.0"
+source = "git+https://github.com/tpt-solutions/tpt-infer.git#16e3c04868ce5d63b6589e260c3b9f8fdd131fbf"
+dependencies = [
+ "tpt-infer-core",
+ "tpt-infer-graph",
+ "tpt-infer-ops",
+ "tpt-infer-runtime",
+]
+
+[[package]]
+name = "tpt-infer-core"
+version = "0.1.0"
+source = "git+https://github.com/tpt-solutions/tpt-infer.git#16e3c04868ce5d63b6589e260c3b9f8fdd131fbf"
+
+[[package]]
+name = "tpt-infer-graph"
+version = "0.1.0"
+source = "git+https://github.com/tpt-solutions/tpt-infer.git#16e3c04868ce5d63b6589e260c3b9f8fdd131fbf"
+dependencies = [
+ "tpt-infer-core",
+]
+
+[[package]]
+name = "tpt-infer-ops"
+version = "0.1.0"
+source = "git+https://github.com/tpt-solutions/tpt-infer.git#16e3c04868ce5d63b6589e260c3b9f8fdd131fbf"
+dependencies = [
+ "tpt-infer-core",
+]
+
+[[package]]
+name = "tpt-infer-runtime"
+version = "0.1.0"
+source = "git+https://github.com/tpt-solutions/tpt-infer.git#16e3c04868ce5d63b6589e260c3b9f8fdd131fbf"
+dependencies = [
+ "tpt-infer-core",
+ "tpt-infer-graph",
+ "tpt-infer-ops",
+]
+
+[[package]]
 name = "tpt-intellect-backend"
 version = "0.1.0"
 source = "git+https://github.com/TPT-Solutions/tpt-intellect?rev=a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc#a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc"
 dependencies = [
+ "serde",
+ "serde_json",
  "tpt-intellect-core",
 ]
 
@@ -790,6 +834,22 @@ dependencies = [
 name = "tpt-intellect-core"
 version = "0.1.0"
 source = "git+https://github.com/TPT-Solutions/tpt-intellect?rev=a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc#a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "tpt-intellect-remote"
+version = "0.1.0"
+source = "git+https://github.com/TPT-Solutions/tpt-intellect?rev=a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc#a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tpt-infer",
+ "tpt-infer-ops",
+ "tpt-intellect-backend",
+ "tpt-intellect-core",
+]
 
 [[package]]
 name = "tpt-thought"
@@ -890,8 +950,10 @@ dependencies = [
  "tpt-eve-causal",
  "tpt-eve-core",
  "tpt-eve-metacognition",
+ "tpt-infer",
  "tpt-intellect-backend",
  "tpt-intellect-core",
+ "tpt-intellect-remote",
  "tpt-thought-core",
  "tpt-thought-deliberation",
  "tpt-thought-providers",

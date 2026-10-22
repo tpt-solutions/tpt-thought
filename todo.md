@@ -5,11 +5,11 @@ Spec: `spec.txt` (section numbers below, e.g. §7, refer to it).
 
 Ground rules (apply to every phase)
 - [ ] Create a crate only when a real API/dependency boundary exists (§100)
-- [ ] No Apache-only dependencies (MIT, MIT/Apache dual, BSD, ISC, Zlib, Unlicense, CC0, Unicode are OK)
-- [ ] Libraries are runtime-agnostic (native `async fn` in traits, no tokio in libraries)
-- [ ] `tpt-thought-core` has no TPT runtime dependencies and no backend dependencies (§102)
+- [x] No Apache-only dependencies (MIT, MIT/Apache dual, BSD, ISC, Zlib, Unlicense, CC0, Unicode are OK)
+- [x] Libraries are runtime-agnostic (native `async fn` in traits, no tokio in libraries)
+- [x] `tpt-thought-core` has no TPT runtime dependencies and no backend dependencies (§102)
 - [ ] Never branch on a specific backend (`if jev`); everything goes through provider traits (§6, §57)
-- [ ] Sibling-repo dependencies (github.com/TPT-Solutions/<repo>) only inside `tpt-thought-integrations`
+- [x] Sibling-repo dependencies (github.com/TPT-Solutions/<repo>) only inside `tpt-thought-integrations`
 - [ ] Every phase ends with tests green, docs updated and `cargo deny check` passing
 
 ---
@@ -113,7 +113,7 @@ Ground rules (apply to every phase)
 - [x] Cognitive Budget enforcement (time, compute, energy, money, memory, branches, model calls, experiments, §63)
 - [x] Create `tpt-thought-integrations`
 - [x] Review the `tpt-intellect` public API (github.com/TPT-Solutions/tpt-intellect)
-- [ ] `IntellectAdapter`: map Thought questions to `IntelligenceRequest`, `Decision<T>`
+- [x] `IntellectAdapter`: map Thought questions to `IntelligenceRequest`, `Decision<T>`
 - [x] Request constraints: required confidence, max cost, max latency, risk tolerance, acceptable providers, required capabilities (§55)
 - [x] Handle abstention and provenance from Intellect decisions
 - [x] Consume calibration metadata (raw vs calibrated vs empirical, §67)
@@ -127,11 +127,11 @@ Ground rules (apply to every phase)
 - [x] Define `DeliberationEngine` trait (reason, investigate, reflect, §46)
 - [x] `ThoughtSnapshot`, `DeliberationContext`, `Investigation`, result types
 - [x] Review `tpt-eve` public API (github.com/TPT-Solutions/tpt-eve)
-- [ ] `EveAdapter` implementing `DeliberationEngine` without depending on Eve internal crates where avoidable
+- [x] `EveAdapter` implementing `DeliberationEngine` without depending on Eve internal crates where avoidable
 - [x] Metacognition consumption: certainty, gaps, assumptions, missing evidence, should-continue/act/ask-for-help (§19)
 - [x] Hypothesis generation via Eve
 - [ ] Contradiction analysis via Eve symbolic/causal reasoning
-- [ ] Causal reasoning (interventions, counterfactuals, effect estimation)
+- [x] Causal reasoning (interventions, counterfactuals, effect estimation)
 - [x] Abstraction and analogy validation (§77)
 - [x] Active learning and experiment design
 - [x] Slow path implemented: Intellect, then Eve, then Augur, then Intellect re-evaluation (§61)
@@ -218,14 +218,14 @@ Ground rules (apply to every phase)
 - [x] Disagreement handling: ask why, assumptions, evidence, calibration, missing variable; disagreement is a cognitive event (§66)
 - [x] Provider calibration consumption and outcome tracking (§67, §68, §119)
 - [x] Human provider (`HumanProvider` returning `Decision<T>`, source = human, §92)
-- [ ] Remote provider via `tpt-intellect-remote` only (no HTTP in Thought, §93)
+- [x] Remote provider via `tpt-intellect-remote` only (no HTTP in Thought, §93)
 - [ ] Local provider support via Intellect (tpt-infer, tpt-spark, Ollama) without knowing internals (§94)
 - [ ] `AugurAdapter`: states, posteriors, evidence updates, residual uncertainty (§49)
 - [ ] `AxiomAdapter`: uncertainty types, validated values, formal constraints, verification markers (§50)
 - [ ] `PulseAdapter`: cognitive event stream (§53, §116)
 - [ ] Multi-agent thought sharing: broadcast, independent evaluation, ensemble merge via INP (§39)
 - [x] Backend evolution test: add a new backend without modifying cognitive model (§90)
-- [ ] Verify acceptance criterion M: same architecture with multiple providers
+- [x] Verify acceptance criterion M: same architecture with multiple providers
 - [x] Docs: PROVIDERS.md
 
 ## Phase 11 — Observability & Cognitive Observatory
@@ -275,7 +275,7 @@ Acceptance criteria (§122)
 - [x] A. Thought receives an observation
 - [x] B. Retrieves relevant memory
 - [x] C. Creates multiple hypotheses
-- [ ] D. Requests structured intelligence from Intellect
+- [x] D. Requests structured intelligence from Intellect
 - [x] E. Escalates uncertain decisions
 - [ ] F. Invokes Eve deliberation
 - [x] G. Creates a prediction
@@ -288,7 +288,7 @@ Acceptance criteria (§122)
 
 Release
 - [x] Pre-release dependency/licence audit
-- [ ] Version, CHANGELOG, tag v0.1.0
+- [x] Version, CHANGELOG, tag v0.1.0
 - [x] Publish decision (crates.io vs git-only)
 
 ---
@@ -310,11 +310,13 @@ Models · databases · LLM clients · tensor ops · probability maths · formal 
 ---
 
 ## Blocked and partial (open items)
-- **Axiom adapter (partial)**: built behind the `axiom` feature, pinned to `tpt-axiom` `42c495f7`, covering validated probabilities, confidence and fuzzy variance. Formal constraints and verification markers (ZK proof envelopes) are not mapped yet.
+- **Axiom adapter (partial)**: built behind the `axiom` feature, pinned to `tpt-axiom` `42c495f7`. Covers validated probabilities, confidence and fuzzy variance. Formal constraints and ZK verification markers are not mapped.
+- **Remote and local providers**: remote (loopback and caller-supplied transports) and local (`tpt-infer` classifier) are built. The `tpt-infer` pin relies on `Cargo.lock`: cargo rejects a workspace patch pointing at the same source, and the sibling manifest names no revision. Ollama and `tpt-spark` are not in the sibling survey and are not built.
+- **Eve contradiction analysis**: `tpt-eve-symbolic` is tokio-free, but its `dirs` dependency pulls in `option-ext` (MPL-2.0), which fails the licence policy. Blocked until Eve drops or replaces that dependency.
+- **Eve query ranking**: no tokio-free API found.
+- **Golden scenario against real siblings**: written, but two properties are ignored. The real Intellect answers at full confidence on the first pass, so the Eve, Augur and re-evaluation stages never run. The Eve adapter has no investigation step to report.
 - **Pulse**: no event stream exists in `tpt-pulse`, only synchronous session-typed channels.
 - **Anima**: no `retrieve_context`, episode persistence, global workspace or ZKPA identity type. The broadcast adapter covers provider discovery only.
-- **Eve**: no contradiction-analysis or query-ranking API that is tokio-free. Causal interventions and counterfactuals are unsupported by the adapter.
 - **Augur**: no evidence-update or residual-uncertainty API. Residual uncertainty is derived from posterior summaries.
-- **Golden scenario against real sibling adapters**: not written yet.
 - **Observatory UI**: belongs to Anima Observatory, out of scope for Thought.
-- **Release tag `v0.1.0`**: needs a commit first; not created.
+- **Release tag `v0.1.0`**: exists locally (commit `220fc9b`); the later commits are not covered by it.
