@@ -717,6 +717,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tpt-axiom-core"
+version = "0.1.0"
+source = "git+https://github.com/tpt-solutions/tpt-axiom?rev=42c495f7751db5acc3c571bb890da41a153f75ba#42c495f7751db5acc3c571bb890da41a153f75ba"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "tpt-eve-abstraction"
 version = "0.1.0"
 source = "git+https://github.com/TPT-Solutions/tpt-eve?rev=c230d0e83633bd0a7f8d3e6a5d830f48236427ad#c230d0e83633bd0a7f8d3e6a5d830f48236427ad"
@@ -876,6 +884,7 @@ dependencies = [
  "tpt-augur-frontend",
  "tpt-augur-ir",
  "tpt-augur-runtime",
+ "tpt-axiom-core",
  "tpt-eve-abstraction",
  "tpt-eve-active-learning",
  "tpt-eve-causal",

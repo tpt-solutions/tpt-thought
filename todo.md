@@ -310,7 +310,7 @@ Models · databases · LLM clients · tensor ops · probability maths · formal 
 ---
 
 ## Blocked and partial (open items)
-- **Axiom adapter**: the `tpt-axiom` repository's root `Cargo.toml` is a template with an invalid package name, so cargo cannot resolve it. Not built; needs a fix in the sibling repo.
+- **Axiom adapter (partial)**: built behind the `axiom` feature, pinned to `tpt-axiom` `42c495f7`, covering validated probabilities, confidence and fuzzy variance. Formal constraints and verification markers (ZK proof envelopes) are not mapped yet.
 - **Pulse**: no event stream exists in `tpt-pulse`, only synchronous session-typed channels.
 - **Anima**: no `retrieve_context`, episode persistence, global workspace or ZKPA identity type. The broadcast adapter covers provider discovery only.
 - **Eve**: no contradiction-analysis or query-ranking API that is tokio-free. Causal interventions and counterfactuals are unsupported by the adapter.

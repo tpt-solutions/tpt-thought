@@ -15,6 +15,7 @@ intellect = ["dep:tpt-intellect-core", "dep:tpt-intellect-backend"]
 eve = ["dep:tpt-eve-core", "dep:tpt-eve-metacognition", "dep:tpt-eve-causal", "dep:tpt-eve-abstraction", "dep:tpt-eve-active-learning"]
 anima = ["dep:tpt-anima-sse", "dep:tpt-anima-inp", "dep:tpt-anima-ck"]
 augur = ["dep:tpt-augur-frontend", "dep:tpt-augur-ir", "dep:tpt-augur-runtime"]
+axiom = ["dep:tpt-axiom-core"]
 
 [dependencies]
 tpt-thought-core = { workspace = true }
@@ -25,8 +26,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 
 # Sibling repositories, each pinned to the revision reviewed for this crate.
-# tpt-axiom is not depended on: its repository contains a template Cargo.toml with an
-# invalid package name ("{{project-name}}"), which stops cargo resolving that git source.
+# tpt-axiom is pinned to the commit that moved its cargo-generate template out of the way.
+# The template's placeholder manifest made cargo fail to scan that git source.
 tpt-intellect-core = { git = "https://github.com/TPT-Solutions/tpt-intellect", rev = "a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc", version = "0.1.0", optional = true }
 tpt-intellect-backend = { git = "https://github.com/TPT-Solutions/tpt-intellect", rev = "a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc", version = "0.1.0", optional = true }
 tpt-eve-core = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "c230d0e83633bd0a7f8d3e6a5d830f48236427ad", version = "0.1.0", optional = true }
@@ -40,6 +41,7 @@ tpt-anima-ck = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "408c
 tpt-augur-frontend = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "634f67a5ed632f9bba082cafeeb921c22dc18195", version = "0.1.0", optional = true }
 tpt-augur-ir = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "634f67a5ed632f9bba082cafeeb921c22dc18195", version = "0.1.0", optional = true }
 tpt-augur-runtime = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "634f67a5ed632f9bba082cafeeb921c22dc18195", version = "0.1.0", optional = true }
+tpt-axiom-core = { git = "https://github.com/tpt-solutions/tpt-axiom", rev = "42c495f7751db5acc3c571bb890da41a153f75ba", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

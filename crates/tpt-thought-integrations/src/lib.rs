@@ -12,13 +12,10 @@
 //! | `eve` | `tpt-eve` `c230d0e8` | `eve::EveAdapter` | `DeliberationEngine` |
 //! | `anima` | `tpt-anima` `408c2e00` | `anima::AnimaMemory`, `anima::AnimaBudget`, `anima::AnimaBroadcast` | `MemoryStore`, budget signal, intention broadcast |
 //! | `augur` | `tpt-augur` `634f67a5` | `augur::AugurAdapter` | posterior records with residual uncertainty |
+//! | `axiom` | `tpt-axiom` `42c495f7` | `axiom::probability`, `axiom::confidence`, `axiom::uncertainty` | `Probability`, `Confidence`, `Uncertainty` (fuzzy variance as epistemic) |
 //!
 //! # Not implemented (blocked)
 //!
-//! - **Axiom** (Phase 10 `AxiomAdapter`): `tpt-axiom` cannot be resolved as a git dependency.
-//!   Its repository contains `crates/tpt-axiom-template/{{project-name}}/Cargo.toml`, whose
-//!   package name is invalid, and cargo fails while reading the repository. The dependency is
-//!   left out rather than patching the sibling.
 //! - **Pulse** (Phase 10 `PulseAdapter`): `tpt-pulse` has no event stream. Only synchronous
 //!   session-typed channels exist, and the signal and backend crates are scaffolds.
 //! - **Anima gaps**: `tpt-anima` has no `retrieve_context`, no episode persistence, no global
@@ -32,6 +29,8 @@
 pub mod anima;
 #[cfg(feature = "augur")]
 pub mod augur;
+#[cfg(feature = "axiom")]
+pub mod axiom;
 #[cfg(feature = "eve")]
 pub mod eve;
 #[cfg(feature = "intellect")]
