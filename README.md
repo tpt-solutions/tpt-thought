@@ -37,7 +37,8 @@ Eve, Intellect, Augur, Axiom and Infer. See `spec.txt` section 111.
 | `tpt-thought-tests` | Acceptance, adversarial and replay tests, and benchmarks. |
 | `tpt-thought` | Facade re-exporting the public API. |
 
-`tpt-thought-integrations` (adapters to sibling repositories) is on hold. See `docs/ARCHITECTURE.md`.
+`tpt-thought-integrations` holds the adapters to sibling repositories. Each is behind its own
+feature. See `docs/ARCHITECTURE.md` and the `docs/INTEGRATION_*` documents.
 
 More crates are added only when a real API or dependency boundary exists. See `todo.md`.
 

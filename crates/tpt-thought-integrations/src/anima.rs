@@ -17,13 +17,16 @@
 //! used.
 
 use tpt_anima_ck::types::ThermalConstraints;
-use tpt_anima_ck::{BudgetManager, ComputeBudget, ComputeUnit};
+use tpt_anima_ck::{BudgetManager, ComputeBudget, ComputeUnit, ThermalStatus};
 use tpt_anima_inp::{
     AgentId as InpAgentId, BroadcastConfig, Capability, CapabilityRegistry, EconomicTerms, Intent,
     IntentBroadcaster, PerformanceProfile, QoSConstraints,
 };
 use tpt_anima_sse::{
     AgentId as SseAgentId, InMemoryStorage, MemoryId, MemoryNode, SensoryModality, VectorEmbedding,
+};
+use tpt_thought_consolidation::{
+    ResourceSnapshot, SleepGrant, SleepRequest, SleepScheduler, ThresholdScheduler,
 };
 use tpt_thought_core::{ContentReference, MemoryRef};
 use tpt_thought_workspace::MemoryStore;
@@ -192,6 +195,38 @@ impl AnimaBudget {
     pub fn thermal_throttle_factor(&self) -> f32 {
         self.manager.thermal_throttle_factor()
     }
+
+    /// Record a temperature reading in Celsius and return CK's resulting thermal status.
+    pub fn update_temperature(&mut self, temp_celsius: f32) -> ThermalStatus {
+        self.manager.update_temperature(temp_celsius)
+    }
+
+    /// Flops CK has not yet allocated.
+    pub fn remaining_flops(&self) -> u64 {
+        self.manager.remaining_budget()
+    }
+}
+
+/// Sleep is granted only while the thermal throttle factor is strictly above this value. CK
+/// maps Cool and Warm to 1.0, Hot to 0.75, Throttled to 0.4 and Critical to 0.0, so only Cool and
+/// Warm units sleep.
+pub const SLEEP_MIN_THROTTLE_FACTOR: f32 = 0.75;
+
+impl SleepScheduler for AnimaBudget {
+    /// Grant sleep when CK's thermal state allows it and flops remain, then apply the threshold
+    /// rules to the caller's resource snapshot. The trait takes no interrupts, so a high-priority
+    /// interrupt must be handled by the caller before this is asked.
+    fn grant(&self, request: &SleepRequest, resources: &ResourceSnapshot) -> SleepGrant {
+        let defaults = ThresholdScheduler::default();
+        if self.thermal_throttle_factor() > SLEEP_MIN_THROTTLE_FACTOR && self.remaining_flops() > 0
+        {
+            defaults.grant(request, resources)
+        } else {
+            SleepGrant::Deferred {
+                retry_after_nanos: defaults.retry_after_nanos,
+            }
+        }
+    }
 }
 
 /// Resolves which providers can serve an action, through INP's broadcaster (§12, §39).
@@ -344,5 +379,85 @@ mod tests {
         assert!(parse_id(&"0".repeat(64)).is_some());
         assert!(parse_id(&format!("+{}", "0".repeat(63))).is_none());
         assert!(parse_id(&"A".repeat(64)).is_none());
+    }
+
+    fn request() -> SleepRequest {
+        SleepRequest {
+            pending_steps: 10,
+            backlog_episodes: 3,
+        }
+    }
+
+    fn free_resources() -> ResourceSnapshot {
+        ResourceSnapshot {
+            compute_free: 0.9,
+            memory_pressure: 0.1,
+            energy_available: 0.9,
+        }
+    }
+
+    fn budget_at(celsius: f32) -> AnimaBudget {
+        let mut budget = AnimaBudget::new(1_000);
+        assert_eq!(
+            budget.update_temperature(celsius),
+            ThermalStatus::from_temperature(celsius, 85.0)
+        );
+        budget
+    }
+
+    #[test]
+    fn cool_idle_budget_grants_sleep() {
+        let budget = budget_at(30.0);
+        assert!(matches!(
+            budget.grant(&request(), &free_resources()),
+            SleepGrant::Granted(_)
+        ));
+    }
+
+    #[test]
+    fn warm_budget_still_grants_sleep() {
+        let budget = budget_at(50.0);
+        assert!(matches!(
+            budget.grant(&request(), &free_resources()),
+            SleepGrant::Granted(_)
+        ));
+    }
+
+    #[test]
+    fn hot_throttled_and_critical_budgets_defer_sleep() {
+        for celsius in [70.0, 80.0, 90.0] {
+            let budget = budget_at(celsius);
+            assert!(
+                matches!(
+                    budget.grant(&request(), &free_resources()),
+                    SleepGrant::Deferred { .. }
+                ),
+                "sleep granted at {celsius} C"
+            );
+        }
+    }
+
+    #[test]
+    fn exhausted_flops_defer_sleep_even_when_cool() {
+        let mut budget = budget_at(30.0);
+        assert!(budget.admit(ComputeUnit::CPU, 1_000.0));
+        assert_eq!(budget.remaining_flops(), 0);
+        assert!(matches!(
+            budget.grant(&request(), &free_resources()),
+            SleepGrant::Deferred { .. }
+        ));
+    }
+
+    #[test]
+    fn caller_resource_thresholds_still_apply_to_a_cool_budget() {
+        let budget = budget_at(30.0);
+        let starved = ResourceSnapshot {
+            compute_free: 0.1,
+            ..free_resources()
+        };
+        assert!(matches!(
+            budget.grant(&request(), &starved),
+            SleepGrant::Deferred { .. }
+        ));
     }
 }

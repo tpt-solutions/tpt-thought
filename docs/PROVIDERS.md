@@ -65,5 +65,14 @@ the core.
 
 ## Sibling adapters
 
-Adapters to Intellect, Eve, Augur and Axiom are planned for `tpt-thought-integrations`. That crate
-is on hold. See `INTEGRATION_INTELLECT.md`.
+`tpt-thought-integrations` provides adapters that implement these traits over sibling repositories,
+each behind its own feature:
+
+- Intellect (`intellect`, `remote` and `local`): choice-based providers, a remote provider over the
+  sibling's loopback or caller-supplied transports, and a local classifier over `tpt-infer`. See
+  `INTEGRATION_INTELLECT.md`.
+- Eve (`eve`): a `DeliberationEngine`, not a provider. See `INTEGRATION_EVE.md`.
+- Anima, Augur and Axiom (`anima`, `augur`, `axiom`): memory, budget, posterior and uncertainty
+  adapters. See `INTEGRATION_ANIMA.md`, `INTEGRATION_AUGUR.md` and `INTEGRATION_AXIOM.md`.
+
+Ollama and `tpt-spark` adapters are not built. Pulse has no event stream to adapt.

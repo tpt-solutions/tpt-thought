@@ -41,10 +41,40 @@ All notable changes to this project are recorded here. The format follows
 - `tpt-thought` facade re-exporting the crates above.
 - CI: build, test, clippy, fmt, documentation, MSRV, cargo-deny and cargo-audit.
 
+- `tpt-thought-integrations`: adapters to sibling repositories, each behind its own feature and
+  pinned to a revision: `intellect` (choice providers over the reference backend), `remote`
+  (loopback and caller-supplied transports), `local` (`tpt-infer` classifier), `eve`
+  (`DeliberationEngine`), `anima` (memory, budget and provider discovery), `augur` (posteriors with
+  residual uncertainty) and `axiom` (probabilities, confidence and fuzzy uncertainty).
+- Real-adapter acceptance tests in `tpt-thought-tests` (feature `real-adapters`), and a golden
+  scenario against the real Intellect and Eve adapters. Two of its properties are ignored; see
+  `docs/INTEGRATION_EVE.md`.
+- Integration documents for Augur and Axiom, and `docs/DEPENDENCY_POLICY.md` now covers the
+  git-source policy for sibling repositories.
+
+### Changed
+
+- `tpt-eve` causal queries: interventions and counterfactuals map onto `tpt-eve-causal`.
+- Eve adapter: hypothesis regeneration reuses ids, abstraction reports `Conditional` for partial
+  support, and an experiment with a cost cap is refused because Eve cannot check cost.
+- Anima budget adapter: refuses non-finite and negative costs, and releases only admitted flops.
+- Anima memory adapter: resolves references only from its own store, in canonical hex form.
+- Intellect adapter: refuses an empty candidate list as a configuration error.
+- `tpt-thought-loop`: wires memory retrieval, hypothesis branching, prediction tracking and
+  provenance into the cycle. The acceptance tests for criteria B, C, G and K check those effects
+  through the loop.
+- `deny.toml`: allows the sibling repository URLs, including the lowercase form used for
+  `tpt-axiom`, and the `tpt-infer` source.
+- `tpt-axiom` template: flattened so cargo can scan the repository for git dependencies.
+
 ### Not yet included
 
-- `tpt-thought-integrations`: adapters to Intellect, Eve, Anima, Augur and Axiom. On hold pending
-  a decision about depending on sibling-repository code. Pulse has no event stream to adapt.
+- Eve contradiction analysis: `tpt-eve-symbolic` pulls in `option-ext` (MPL-2.0) through `dirs`.
+- Eve query ranking, and any Eve deliberation entry point (`reason`, `investigate`).
+- Pulse adapter: `tpt-pulse` has no event stream.
+- Anima: `retrieve_context`, episode persistence, a global workspace and a ZKPA identity type.
+- Augur evidence updates and a residual-uncertainty API.
+- Axiom formal constraints and ZK verification markers.
+- Ollama and `tpt-spark` adapters.
 - Observatory UI, which belongs to Anima's Observatory.
-- The "same scenario against real sibling adapters" golden demonstration.
 - Distribution to crates.io. Releases are git-only; see `docs/DEPENDENCY_POLICY.md`.

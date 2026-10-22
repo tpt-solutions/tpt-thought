@@ -954,6 +954,7 @@ dependencies = [
  "tpt-intellect-backend",
  "tpt-intellect-core",
  "tpt-intellect-remote",
+ "tpt-thought-consolidation",
  "tpt-thought-core",
  "tpt-thought-deliberation",
  "tpt-thought-providers",

@@ -33,8 +33,10 @@ Crates are listed bottom-up. A crate may depend only on crates in lower layers.
 | 3 | `tpt-thought-tests` | Acceptance, adversarial, replay and resource tests, plus benchmarks. |
 | top | `tpt-thought` | Facade that re-exports the public API. |
 
-`tpt-thought-integrations` is **on hold**. It would hold the only adapters to sibling repositories
-(Intellect, Eve, Anima, Augur, Axiom). It is not in the build yet. See the `INTEGRATION_*` documents.
+`tpt-thought-integrations` holds the only adapters to sibling repositories (Intellect, Eve, Anima,
+Augur, Axiom). Each is behind its own feature, and none is enabled by default. Each sibling is
+pinned to a revision, and tokio must stay out of the dependency tree of every enabled feature. See
+the `INTEGRATION_*` documents for what each adapter covers and what is not yet mapped.
 
 ## Dependency rules
 

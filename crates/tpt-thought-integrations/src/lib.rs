@@ -10,7 +10,7 @@
 //! |---|---|---|---|
 //! | `intellect` | `tpt-intellect` `a502c013` | `intellect::IntellectProvider` | `IntelligenceProvider` |
 //! | `eve` | `tpt-eve` `c230d0e8` | `eve::EveAdapter` | `DeliberationEngine` |
-//! | `anima` | `tpt-anima` `408c2e00` | `anima::AnimaMemory`, `anima::AnimaBudget`, `anima::AnimaBroadcast` | `MemoryStore`, budget signal, intention broadcast |
+//! | `anima` | `tpt-anima` `408c2e00` | `anima::AnimaMemory`, `anima::AnimaBudget`, `anima::AnimaBroadcast` | `MemoryStore`, budget signal, intention broadcast, `SleepScheduler` (throttle factor above 0.75 and flops remaining) |
 //! | `augur` | `tpt-augur` `634f67a5` | `augur::AugurAdapter` | posterior records with residual uncertainty |
 //! | `axiom` | `tpt-axiom` `42c495f7` | `axiom::probability`, `axiom::confidence`, `axiom::uncertainty` | `Probability`, `Confidence`, `Uncertainty` (fuzzy variance as epistemic) |
 //! | `remote` | `tpt-intellect` `a502c013` (`tpt-intellect-remote`, serde) | `remote::loopback`, `remote::over_transport` | `IntelligenceProvider` |

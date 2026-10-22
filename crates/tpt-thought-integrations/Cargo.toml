@@ -13,7 +13,7 @@ readme.workspace = true
 default = []
 intellect = ["dep:tpt-intellect-core", "dep:tpt-intellect-backend"]
 eve = ["dep:tpt-eve-core", "dep:tpt-eve-metacognition", "dep:tpt-eve-causal", "dep:tpt-eve-abstraction", "dep:tpt-eve-active-learning"]
-anima = ["dep:tpt-anima-sse", "dep:tpt-anima-inp", "dep:tpt-anima-ck"]
+anima = ["dep:tpt-anima-sse", "dep:tpt-anima-inp", "dep:tpt-anima-ck", "dep:tpt-thought-consolidation"]
 augur = ["dep:tpt-augur-frontend", "dep:tpt-augur-ir", "dep:tpt-augur-runtime"]
 axiom = ["dep:tpt-axiom-core"]
 remote = ["intellect", "dep:tpt-intellect-remote"]
@@ -24,6 +24,7 @@ tpt-thought-core = { workspace = true }
 tpt-thought-providers = { workspace = true }
 tpt-thought-deliberation = { workspace = true }
 tpt-thought-workspace = { workspace = true }
+tpt-thought-consolidation = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
