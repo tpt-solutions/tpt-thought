@@ -45,4 +45,10 @@ unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # Sibling TPT repos (only consumed by tpt-thought-integrations):
-allow-git = ["https://github.com/TPT-Solutions"]
+allow-git = [
+    "https://github.com/TPT-Solutions",
+    "https://github.com/TPT-Solutions/tpt-intellect",
+    "https://github.com/TPT-Solutions/tpt-eve",
+    "https://github.com/TPT-Solutions/tpt-anima",
+    "https://github.com/TPT-Solutions/tpt-augur",
+]

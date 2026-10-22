@@ -1,30 +1,37 @@
 # Integration: Intellect
 
-**Status: not yet implemented.** The adapter belongs in `tpt-thought-integrations`, which is on
-hold. Adding it requires a decision about depending on sibling-repository code, which has not been
-made.
+**Status: implemented** behind the `intellect` feature of `tpt-thought-integrations`. The
+sibling dependency is `tpt-intellect` pinned at revision `a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc`
+(crates `tpt-intellect-core` and `tpt-intellect-backend`, both 0.1.0).
 
-## Planned mapping
+## Mapping
 
 | Thought | Intellect |
 |---|---|
-| `IntelligenceProvider` | `IntelligenceBackend` |
-| `IntelligenceRequest` and `Constraints` | `IntelligenceRequest`, `ConfidenceRequirement` |
-| `Decision` (answer or abstention) | `Decision<T>`, `DecisionOutcome`, `AbstentionReason` |
-| Provider profile and discovery | `BackendInfo`, `BackendCapabilities`, `capability_check` |
-| Raw, calibrated and empirical confidence | `ConfidenceSemantics`, `CalibrationReport` |
-| Provenance | `DecisionProvenance`, `ProvenanceRecorder` |
-| Escalation and abstention policy | `DecisionPolicy`, `PolicyChain`, `Cascade` |
+| `IntelligenceProvider` | `IntelligenceBackend<String>` (wrapped by `IntellectProvider`) |
+| `IntelligenceRequest` question | `IntelligenceRequest` with `StructuredInput` text and `DecisionKind::Choice` |
+| Candidate answers | `Candidate<String>` fixed when the provider is built |
+| `Constraints::max_latency_nanos` | `RequestConstraints::max_latency` |
+| `Decision` answer (choice) | `DecisionOutcome::Choice`, answered with `StructuredValue::Text` |
+| Abstention | `DecisionOutcome::Abstain`, recorded as an abstained `Decision` |
+| Confidence | `Confidence` raw value, from the sibling's `Confidence::value()` |
+| Provider identity | `BackendId` |
+| Backend errors | `Unavailable`, `Timeout`, `UnsupportedRequest` and other variants map to `ProviderErrorKind` |
+| Capability discovery | `BackendCapabilities::supports(DecisionKind::Choice)` via `supports_choice()` |
 
-## What exists in Intellect
+Sibling confidence is recorded as raw. Calibrated and empirical values come from Thought's own
+`CalibrationTracker`, not from Intellect.
 
-The surface is synchronous and has no async runtime. It is the most coherent sibling API. Relevant
-items: `IntelligenceBackend` with `decide`, `BackendInfo`, `BackendCapabilities`,
-`DecisionPolicy`, `CalibrationReport`, `BudgetLedger`, `verify_conformance`, and `ReferenceBackend`.
+## Not mapped
 
-## Dependency concerns
+- Outcomes other than choice and abstention (binary, score, ranking and so on) produce an
+  abstention whose reason names the outcome. They are not converted to answers.
+- Candidate lists are fixed at construction. Thought questions do not carry candidates yet.
+- Required capabilities in `Constraints` are not forwarded to the sibling.
+- The remote, batch and stream crates are not used.
 
-- `tpt-intellect-core` has an optional git dependency on `tpt-axiom-core`.
-- `tpt-intellect-remote` has git dependencies on `tpt-infer` and `tpt-infer-ops`. Their licences
-  have not been checked.
-- The remote crate must not be used if it brings in an async runtime.
+## Tests
+
+`reference_backend_answers_with_one_of_the_candidates` and
+`capability_discovery_reports_choice_support` exercise the real `ReferenceBackend` from
+`tpt-intellect-backend`, not a mock.

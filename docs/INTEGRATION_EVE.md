@@ -1,30 +1,37 @@
 # Integration: Eve
 
-**Status: not yet implemented.** The adapter belongs in `tpt-thought-integrations`, which is on
-hold. Adding it requires a decision about depending on sibling-repository code, which has not been
-made.
+**Status: implemented in part** behind the `eve` feature of `tpt-thought-integrations`. The
+sibling dependencies are `tpt-eve` crates pinned at revision `c230d0e83633bd0a7f8d3e6a5d830f48236427ad`
+(`tpt-eve-core`, `tpt-eve-metacognition`, `tpt-eve-causal`, `tpt-eve-abstraction`,
+`tpt-eve-active-learning`, all 0.1.0).
 
-## Planned mapping
+## Mapping
 
-Eve implements Thought's `DeliberationEngine` (in `tpt-thought-deliberation`). Thought's operations
-map to Eve layers:
+`EveAdapter` implements Thought's `DeliberationEngine`. Each capability maps onto one Eve layer.
+Facts, observations and causal relations are supplied through `assert_fact`, `observe`, `relate`,
+`fit` and `add_example` before deliberation.
 
-| Thought operation | Eve layer |
-|---|---|
-| Metacognition: certainty, gaps, assumptions, missing evidence | `MetaCognitionEngine` (`tpt-eve-metacognition`) |
-| Hypothesis generation | `ActiveLearningEngine::generate_hypotheses` (`tpt-eve-active-learning`) |
-| Experiment design | `ActiveLearningEngine::design_experiment` |
-| Causal reasoning: interventions, counterfactuals, effect estimation | `CausalReasoningEngine` (`tpt-eve-causal`) |
-| Abstraction and analogy validation | `AbstractionEngine` (`tpt-eve-abstraction`) |
-| Contradiction analysis | `SymbolicReasoningLayer::check_consistency` (`tpt-eve-symbolic`), if it is free of async runtimes |
+| Thought operation | Eve layer | Status |
+|---|---|---|
+| `reflect` (metacognition) | `MetaCognitionEngine::detect_gaps`, `calibration_error` | implemented |
+| `generate_hypotheses` | `ActiveLearningEngine::generate_hypotheses` | implemented |
+| `design_experiment` | `ActiveLearningEngine::design_experiment` | implemented; `estimated_cost` is 0.0 because Eve does not estimate cost |
+| `analyse_causation` (effect estimate) | `CausalReasoningEngine::estimate_causal_effect` | implemented |
+| `analyse_causation` (intervention, counterfactual) | `predict_intervention`, `simulate_counterfactual` | unsupported; needs Eve's intervention and counterfactual request types |
+| `validate_abstraction` | `AbstractionEngine::mine_principles` | implemented; analogy targets are noted but not validated |
+| `analyse_contradictions` | none in `tpt-eve` that is tokio-free | unsupported |
+| `rank_queries` | none | unsupported |
+| `reason`, `investigate` | no deliberation entry point in `tpt-eve` | unsupported |
 
-## Gaps in Eve
+## Blocked
 
-- No deliberation entry point exists. The word appears only in prose.
-- `tpt-eve-neural` declares tokio and async-trait as normal dependencies, and its JSON-RPC code uses
-  tokio networking. **It must not be used.**
-- `tpt-eve-symbolic` relies on `redb` and has an unfinished backtracking stub.
+- `tpt-eve-symbolic` (contradiction analysis) was not used. It depends on `redb`, and no
+  licence or runtime check of that dependency has been done for this feature.
+- `tpt-eve-neural` pulls in tokio and async-trait, so it is excluded.
+- `tpt-eve` has no deliberation entry point, so `reason` and `investigate` have no Eve source.
 
-## Dependency concerns
+## Tests
 
-Only the non-neural layers are candidates. Each needs its runtime and licence checked before use.
+The tests exercise the real Eve layers: reflection on asserted facts, a causal effect recovered
+from 20 linear observations (expected about 2.0), unsupported intervention and contradiction
+requests, experiment design from a generated hypothesis, and rejection of unknown hypotheses.

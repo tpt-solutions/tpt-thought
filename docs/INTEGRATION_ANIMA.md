@@ -1,32 +1,42 @@
 # Integration: Anima
 
-**Status: not yet implemented.** The adapter belongs in `tpt-thought-integrations`, which is on
-hold. Adding it requires a decision about depending on sibling-repository code, which has not been
-made.
+**Status: implemented in part** behind the `anima` feature of `tpt-thought-integrations`. The
+sibling dependencies are `tpt-anima` crates pinned at revision `408c2e0065ba99e619fa7277d3801e0c9abad0ff`
+(`tpt-anima-sse`, `tpt-anima-inp`, `tpt-anima-ck`, all 0.1.0).
 
-## Planned mapping
+## Mapping
 
-| Thought | Anima |
-|---|---|
-| `MemoryStore` (IDs and tags only, no duplicated storage) | `tpt-anima-sse` in-memory storage: `semantic_search`, `attention_retrieve`, `hybrid_retrieve`, `retrieve_by_tag` |
-| Shared workspace publish, attend, broadcast, request | `tpt-anima-inp` `IntentBroadcaster` (nearest equivalent) |
-| Scheduling budget and sleep grant (`SleepScheduler`) | `tpt-anima-ck` `BudgetManager`, `CircuitBreaker` |
-| Identity and attestation | `tpt-anima-zkpa` `AttestationService` (see gap below) |
+| Thought | Anima | Adapter |
+|---|---|---|
+| `MemoryStore` (IDs and tags only, no duplicated storage, §10) | `tpt-anima-sse` `InMemoryStorage`, `retrieve_by_tag` | `AnimaMemory` |
+| Memory ranking | tag overlap with the cue, then identifier for determinism | `AnimaMemory::retrieve` |
+| Compute-budget signal (§35) | `tpt-anima-ck` `BudgetManager::allocate_flops`, `release_flops`, `thermal_throttle_factor` | `AnimaBudget` |
+| Provider discovery for an intention (§12, §39) | `tpt-anima-inp` `IntentBroadcaster::begin_broadcast` over a `CapabilityRegistry` | `AnimaBroadcast` |
 
-The Thought-side global workspace is in-process (`tpt-thought-workspace`). The shared workspace is
-Anima's concern and sits behind that crate's `GlobalWorkspace` trait.
+Anima's ids are 32-byte arrays in the memory layer and UUIDs in the broadcast layer. The adapter
+keeps the two apart and does not convert between them.
 
-## Gaps in Anima
+## Partial mapping
 
-- No `retrieve_context` function.
-- No episode persistence API. Episodic records are defined on the Thought side only.
-- No global workspace type. The closest is the INP broadcaster.
-- No ZKPA identity type. Only proofs, attestation and delegation exist.
-- Storage is in-memory only. `InMemoryStorage` is the only store.
+`AnimaBroadcast` covers provider discovery only. The workspace's publish, subscribe, withdraw and
+request operations have no counterpart in `tpt-anima`, so they are not mapped.
 
-## Runtime concerns
+## Not provided by `tpt-anima`
 
-- `tpt-anima-zkpa` depends on tokio with full features, and its async proof path is async. **It
-  must not be used.**
-- Co-processor, core-hypervisor, edge-gateway, edge-runtime and observatory also depend on tokio.
-- `tpt-anima-sse`, `tpt-anima-inp` and `tpt-anima-ck` are synchronous and free of tokio.
+These are not invented here:
+
+- `retrieve_context`
+- episode persistence (§14, §48.2)
+- a global workspace type
+- a ZKPA identity type (`tpt-anima-zkpa` pulls in tokio, so it is excluded)
+
+## Blocked
+
+- Thought's `ThoughtBubble` is not connected to Anima's `thought_bubble` module.
+- CK scheduling of sleep (§35) is not connected. Thought's `SleepScheduler` trait has no Anima
+  implementation.
+
+## Tests
+
+The tests use the real SSE store and CK budget manager, and the real INP broadcaster and capability
+registry. Memory ranking, budget admission and release, and provider discovery are each covered.

@@ -717,14 +717,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tpt-axiom-core"
-version = "0.1.0"
-source = "git+https://github.com/TPT-Solutions/tpt-axiom?rev=495ab6360feb58c5e518379d2ffcb2c32a24c420#495ab6360feb58c5e518379d2ffcb2c32a24c420"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "tpt-eve-abstraction"
 version = "0.1.0"
 source = "git+https://github.com/TPT-Solutions/tpt-eve?rev=c230d0e83633bd0a7f8d3e6a5d830f48236427ad#c230d0e83633bd0a7f8d3e6a5d830f48236427ad"
@@ -877,15 +869,17 @@ version = "0.1.0"
 dependencies = [
  "proptest",
  "serde",
+ "serde_json",
  "tpt-anima-ck",
  "tpt-anima-inp",
  "tpt-anima-sse",
+ "tpt-augur-frontend",
  "tpt-augur-ir",
  "tpt-augur-runtime",
- "tpt-axiom-core",
  "tpt-eve-abstraction",
  "tpt-eve-active-learning",
  "tpt-eve-causal",
+ "tpt-eve-core",
  "tpt-eve-metacognition",
  "tpt-intellect-backend",
  "tpt-intellect-core",
@@ -1008,6 +1002,7 @@ dependencies = [
  "tpt-thought-deliberation",
  "tpt-thought-graph",
  "tpt-thought-hypothesis",
+ "tpt-thought-integrations",
  "tpt-thought-intention",
  "tpt-thought-loop",
  "tpt-thought-observatory",
