@@ -15,6 +15,20 @@
 //! assert_eq!(t.state, ThoughtState::Received);
 //! ```
 
+pub use tpt_thought_attention as attention;
+pub use tpt_thought_consolidation as consolidation;
 pub use tpt_thought_core as core;
+pub use tpt_thought_deliberation as deliberation;
+pub use tpt_thought_graph as graph;
+pub use tpt_thought_hypothesis as hypothesis;
+pub use tpt_thought_intention as intention;
+pub use tpt_thought_loop as cognitive_loop;
+pub use tpt_thought_observatory as observatory;
+pub use tpt_thought_policy as policy;
+pub use tpt_thought_prediction as prediction;
 pub use tpt_thought_provenance as provenance;
+pub use tpt_thought_providers as providers;
+pub use tpt_thought_reflection as reflection;
+pub use tpt_thought_safety as safety;
 pub use tpt_thought_state as state;
+pub use tpt_thought_workspace as workspace;

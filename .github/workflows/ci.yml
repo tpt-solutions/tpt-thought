@@ -19,6 +19,13 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
+      # The sibling TPT repositories are public and fetch anonymously. If one becomes private,
+      # set the TPT_GIT_TOKEN secret (a fine-grained PAT with read-only contents access) and
+      # this step rewrites GitHub URLs to use it. Without the secret, nothing changes.
+      - name: Configure git auth for sibling repositories
+        if: ${{ secrets.TPT_GIT_TOKEN != '' }}
+        shell: bash
+        run: git config --global url."https://x-access-token:${{ secrets.TPT_GIT_TOKEN }}@github.com/TPT-Solutions".insteadOf "https://github.com/TPT-Solutions"
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -45,3 +52,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
+
+  audit:
+    name: cargo-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -282,3 +282,101 @@ mod tests {
         }
     }
 }
+
+/// The thought lifecycle API (spec section 121): `create` is `Thought::new` /
+/// `Thought::from_observation`; the rest are provided here. Each step applies exactly one
+/// lifecycle event, so calling out of order returns [`IllegalTransition`].
+pub trait ThoughtLifecycle {
+    /// Input received (`Created -> Received`).
+    fn receive(&mut self, now: Timestamp) -> Result<ThoughtState, IllegalTransition>;
+    /// Begin attending (`Received -> Attending`).
+    fn attend(&mut self, now: Timestamp) -> Result<ThoughtState, IllegalTransition>;
+    /// Begin gathering context (`Attending -> Contextualising`).
+    fn contextualise(&mut self, now: Timestamp) -> Result<ThoughtState, IllegalTransition>;
+    /// Associate memories (`Contextualising -> Associating`). Memories are added only if the
+    /// transition succeeds.
+    fn associate(
+        &mut self,
+        memories: impl IntoIterator<Item = tpt_thought_core::MemoryRef>,
+        now: Timestamp,
+    ) -> Result<ThoughtState, IllegalTransition>;
+    /// Finish (`Consolidating -> Complete`).
+    fn complete(&mut self, now: Timestamp) -> Result<ThoughtState, IllegalTransition>;
+}
+
+impl ThoughtLifecycle for Thought {
+    fn receive(&mut self, now: Timestamp) -> Result<ThoughtState, IllegalTransition> {
+        apply(self, ThoughtEvent::Receive, now)
+    }
+
+    fn attend(&mut self, now: Timestamp) -> Result<ThoughtState, IllegalTransition> {
+        apply(self, ThoughtEvent::Attend, now)
+    }
+
+    fn contextualise(&mut self, now: Timestamp) -> Result<ThoughtState, IllegalTransition> {
+        apply(self, ThoughtEvent::Contextualise, now)
+    }
+
+    fn associate(
+        &mut self,
+        memories: impl IntoIterator<Item = tpt_thought_core::MemoryRef>,
+        now: Timestamp,
+    ) -> Result<ThoughtState, IllegalTransition> {
+        let state = apply(self, ThoughtEvent::Associate, now)?;
+        self.memories.extend(memories);
+        Ok(state)
+    }
+
+    fn complete(&mut self, now: Timestamp) -> Result<ThoughtState, IllegalTransition> {
+        apply(self, ThoughtEvent::Complete, now)
+    }
+}
+
+#[cfg(test)]
+mod lifecycle_tests {
+    use super::*;
+    use tpt_thought_core::*;
+
+    fn obs(ids: &IdGenerator) -> Observation {
+        Observation {
+            id: ids.observation(),
+            content: Box::new(ThoughtContent::Structured(StructuredValue::Null)),
+            source: "s".into(),
+            trust: SourceTrust::Trusted,
+            observed_at: Timestamp(5),
+        }
+    }
+
+    #[test]
+    fn from_observation_through_association() {
+        let ids = IdGenerator::new(SeededEntropy::new(1));
+        let mut t = Thought::from_observation(ids.thought(), obs(&ids), Timestamp(6));
+        assert_eq!(t.state, ThoughtState::Created);
+        assert_eq!(t.temporal.observed_at, Some(Timestamp(5)));
+        t.receive(Timestamp(7)).unwrap();
+        t.attend(Timestamp(8)).unwrap();
+        t.contextualise(Timestamp(9)).unwrap();
+        let m = ContentReference {
+            store: "anima-sse".into(),
+            id: "M1".into(),
+        };
+        t.associate([m.clone()], Timestamp(10)).unwrap();
+        assert_eq!(t.state, ThoughtState::Associating);
+        assert_eq!(t.memories, vec![m]);
+        assert_eq!(t.temporal.updated_at, Some(Timestamp(10)));
+    }
+
+    #[test]
+    fn out_of_order_calls_fail_without_side_effects() {
+        let ids = IdGenerator::new(SeededEntropy::new(1));
+        let mut t = Thought::from_observation(ids.thought(), obs(&ids), Timestamp(6));
+        let m = ContentReference {
+            store: "s".into(),
+            id: "x".into(),
+        };
+        assert!(t.associate([m], Timestamp(7)).is_err());
+        assert!(t.memories.is_empty());
+        assert!(t.complete(Timestamp(7)).is_err());
+        assert_eq!(t.state, ThoughtState::Created);
+    }
+}

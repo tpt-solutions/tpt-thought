@@ -1,0 +1,39 @@
+[package]
+name = "tpt-thought-tests"
+description = "TPT Thought test suites: acceptance criteria, adversarial, property, decoder fuzzing and benchmarks"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+publish = false
+
+[dependencies]
+
+[dev-dependencies]
+tpt-thought-core = { workspace = true }
+tpt-thought-state = { workspace = true }
+tpt-thought-provenance = { workspace = true }
+tpt-thought-attention = { workspace = true }
+tpt-thought-graph = { workspace = true }
+tpt-thought-hypothesis = { workspace = true }
+tpt-thought-prediction = { workspace = true }
+tpt-thought-providers = { workspace = true }
+tpt-thought-deliberation = { workspace = true }
+tpt-thought-workspace = { workspace = true }
+tpt-thought-safety = { workspace = true }
+tpt-thought-loop = { path = "../tpt-thought-loop", version = "0.1.0" }
+tpt-thought-intention = { path = "../tpt-thought-intention", version = "0.1.0" }
+tpt-thought-observatory = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+proptest = { workspace = true }
+
+[[bench]]
+name = "pipeline"
+harness = false
+
+[lints]
+workspace = true

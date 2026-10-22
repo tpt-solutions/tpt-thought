@@ -13,6 +13,20 @@ readme.workspace = true
 tpt-thought-core = { workspace = true }
 tpt-thought-state = { workspace = true }
 tpt-thought-provenance = { workspace = true }
+tpt-thought-attention = { workspace = true }
+tpt-thought-graph = { workspace = true }
+tpt-thought-intention = { workspace = true }
+tpt-thought-loop = { workspace = true }
+tpt-thought-observatory = { workspace = true }
+tpt-thought-consolidation = { workspace = true }
+tpt-thought-reflection = { workspace = true }
+tpt-thought-safety = { workspace = true }
+tpt-thought-workspace = { workspace = true }
+tpt-thought-policy = { workspace = true }
+tpt-thought-deliberation = { workspace = true }
+tpt-thought-providers = { workspace = true }
+tpt-thought-prediction = { workspace = true }
+tpt-thought-hypothesis = { workspace = true }
 
 [lints]
 workspace = true

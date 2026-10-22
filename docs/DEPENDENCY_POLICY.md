@@ -27,3 +27,23 @@ reusable.
 
 Vendor SDKs (OpenAI, Anthropic, Ollama, Hugging Face, ...) and `tokio` are denied in
 `deny.toml`. Vendor access belongs in adapters behind provider traits.
+
+## Distribution: git-only
+
+Thought is distributed from git, not crates.io. The sibling dependencies are git dependencies,
+and crates.io does not accept those. Every release is tagged in this repository.
+
+## CI git authentication
+
+The sibling repositories (`github.com/TPT-Solutions/*`) are public and fetch anonymously, so CI
+needs no credentials today.
+
+If a sibling becomes private, set the `TPT_GIT_TOKEN` repository secret to a fine-grained token
+with read-only contents access. The CI step then rewrites GitHub URLs for that organisation to use
+it. The step is skipped when the secret is absent.
+
+## Sibling dependencies on hold
+
+Sibling dependencies are not yet in the build. See `INTEGRATION_*.md`. Before any sibling
+dependency is added, its licence and its async runtime requirements must be checked against this
+policy.

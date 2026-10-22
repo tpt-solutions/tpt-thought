@@ -24,7 +24,7 @@ Ground rules (apply to every phase)
 - [x] `cargo-deny` config (`deny.toml`): allow-list of MIT-compatible licences, deny Apache-2.0-only, ban vendor SDK crates (§57)
 - [x] `rustfmt.toml`, `clippy` settings (`-D warnings`), `#![forbid(unsafe_code)]` policy
 - [x] CI workflow written (not yet run on GitHub): build, test, clippy, fmt, cargo-deny, docs build (Windows + Linux)
-- [ ] Decide git auth for sibling-repo git deps in CI
+- [x] Decide git auth for sibling-repo git deps in CI
 - [x] `README.md` (what Thought is, and what it is not, §1)
 - [x] `CONTRIBUTING.md` (contributions licensed MIT OR Apache-2.0)
 - [x] `docs/` skeleton: ARCHITECTURE, COGNITIVE_MODEL, INTEGRATION_ANIMA, INTEGRATION_EVE, INTEGRATION_INTELLECT, PROVIDERS, BENCHMARKS
@@ -63,233 +63,233 @@ Ground rules (apply to every phase)
 - [x] Docs: COGNITIVE_MODEL.md first draft
 
 ## Phase 1 — Thought Lifecycle
-- [ ] Thought lifecycle API: create, attend, contextualise, associate, complete (§121)
-- [ ] `Thought::from_observation`
-- [ ] Source classification of inputs (trusted/untrusted, §41)
-- [ ] Create `tpt-thought-attention`
-- [ ] `AttentionState` with multi-factor model: salience, novelty, urgency, goal relevance, risk, uncertainty, information gain, value relevance, recency, resource cost (§11)
-- [ ] Configurable attention formula (pluggable scoring)
-- [ ] Cognitive demand output (priority, deadline, estimated cost, capabilities, risk, info gain) for Anima CK (§35)
-- [ ] Working memory (§13): strict capacity, attention weighting, decay, eviction, priority, provenance
-- [ ] Forgetting states: temporary, weak, strong, consolidated, expired, pruned (§28)
-- [ ] Create `tpt-thought-graph`
-- [ ] Typed edges: supports, contradicts, causes, derived-from, generalises, specialises, triggers, analogous-to (§10, §77)
-- [ ] Association (↔) and causation (→) as distinct edge types (§76); preceded-by vs caused (§75)
-- [ ] Causal provenance stored on causal edges
-- [ ] Graph queries: ancestors, descendants, contradictions, evidence paths
-- [ ] Graph references Anima memory by ID only (no duplicated storage, §10)
-- [ ] Thought recursion limits: max_depth, max_children, max_total_compute, max_duration (§85)
-- [ ] Tests: lifecycle, attention scoring, working-memory eviction, graph invariants
+- [x] Thought lifecycle API: create, attend, contextualise, associate, complete (§121)
+- [x] `Thought::from_observation`
+- [x] Source classification of inputs (trusted/untrusted, §41)
+- [x] Create `tpt-thought-attention`
+- [x] `AttentionState` with multi-factor model: salience, novelty, urgency, goal relevance, risk, uncertainty, information gain, value relevance, recency, resource cost (§11)
+- [x] Configurable attention formula (pluggable scoring)
+- [x] Cognitive demand output (priority, deadline, estimated cost, capabilities, risk, info gain) for Anima CK (§35)
+- [x] Working memory (§13): strict capacity, attention weighting, decay, eviction, priority, provenance
+- [x] Forgetting states: temporary, weak, strong, consolidated, expired, pruned (§28)
+- [x] Create `tpt-thought-graph`
+- [x] Typed edges: supports, contradicts, causes, derived-from, generalises, specialises, triggers, analogous-to (§10, §77)
+- [x] Association (↔) and causation (→) as distinct edge types (§76); preceded-by vs caused (§75)
+- [x] Causal provenance stored on causal edges
+- [x] Graph queries: ancestors, descendants, contradictions, evidence paths
+- [x] Graph references Anima memory by ID only (no duplicated storage, §10)
+- [x] Thought recursion limits: max_depth, max_children, max_total_compute, max_duration (§85)
+- [x] Tests: lifecycle, attention scoring, working-memory eviction, graph invariants
 
 ## Phase 2 — Hypotheses
-- [ ] Create `tpt-thought-hypothesis`
-- [ ] Hypothesis lifecycle: GENERATED, UNTESTED, SUPPORTED/WEAKENED, TESTING, UPDATED, ACCEPTED/REJECTED/SUSPENDED (§16)
-- [ ] Branching with per-branch probability, confidence, evidence, cost, risk, expected information gain (§15)
-- [ ] Branch operations: explore, prune, merge, suspend, promote, reject
-- [ ] Thought collapse by probability, utility, evidence, formal verification, ensemble agreement, human choice (§64)
-- [ ] Belief promotion pipeline: thought, hypothesis, supported hypothesis, belief candidate, belief (§43)
-- [ ] Configurable promotion criteria (repeated observation, proof, experiment, high-confidence intelligence, model agreement, human confirmation)
-- [ ] Belief demotion pipeline (§44)
-- [ ] Contradiction representation and handling: attention up, investigate, resolve by new evidence / context separation / conditional validity (§29)
-- [ ] Rule: a thought is not a belief merely because it was considered
-- [ ] Information-gain primitive (§37) and investigate-if gain exceeds cost context
-- [ ] Tests: branch explosion bounds, promotion/demotion round trips, contradiction cases
+- [x] Create `tpt-thought-hypothesis`
+- [x] Hypothesis lifecycle: GENERATED, UNTESTED, SUPPORTED/WEAKENED, TESTING, UPDATED, ACCEPTED/REJECTED/SUSPENDED (§16)
+- [x] Branching with per-branch probability, confidence, evidence, cost, risk, expected information gain (§15)
+- [x] Branch operations: explore, prune, merge, suspend, promote, reject
+- [x] Thought collapse by probability, utility, evidence, formal verification, ensemble agreement, human choice (§64)
+- [x] Belief promotion pipeline: thought, hypothesis, supported hypothesis, belief candidate, belief (§43)
+- [x] Configurable promotion criteria (repeated observation, proof, experiment, high-confidence intelligence, model agreement, human confirmation)
+- [x] Belief demotion pipeline (§44)
+- [x] Contradiction representation and handling: attention up, investigate, resolve by new evidence / context separation / conditional validity (§29)
+- [x] Rule: a thought is not a belief merely because it was considered
+- [x] Information-gain primitive (§37) and investigate-if gain exceeds cost context
+- [x] Tests: branch explosion bounds, promotion/demotion round trips, contradiction cases
 
 ## Phase 3 — Prediction
-- [ ] Create `tpt-thought-prediction`
-- [ ] `Prediction` primitive (predicted state, expected time, confidence, assumptions, source thought, §17)
-- [ ] Match predictions against later observations
-- [ ] Prediction error type and error-as-event (§18)
-- [ ] Configurable error response ladder: small (continue), moderate (update belief), large (raise attention, investigate), catastrophic (suspend model, re-evaluate assumptions)
-- [ ] Prediction-error fan-out hooks (memory reinforcement, active learning, belief updates, confidence, attention, planning)
-- [ ] Tests: prediction, observation, error, response thresholds
+- [x] Create `tpt-thought-prediction`
+- [x] `Prediction` primitive (predicted state, expected time, confidence, assumptions, source thought, §17)
+- [x] Match predictions against later observations
+- [x] Prediction error type and error-as-event (§18)
+- [x] Configurable error response ladder: small (continue), moderate (update belief), large (raise attention, investigate), catastrophic (suspend model, re-evaluate assumptions)
+- [x] Prediction-error fan-out hooks (memory reinforcement, active learning, belief updates, confidence, attention, planning)
+- [x] Tests: prediction, observation, error, response thresholds
 
 ## Phase 4 — Intellect Integration
-- [ ] Define provider-neutral traits in Thought (e.g. `IntelligenceProvider`) so core never depends on Intellect
-- [ ] Create `tpt-thought-policy`
-- [ ] Policies: escalation, branching, resource use, risk, human escalation, termination
-- [ ] Escalation levels L0 to L6 (reflex to human), configurable (§20)
-- [ ] Expected value of additional cognition drives escalation (§36)
-- [ ] Cognitive Budget enforcement (time, compute, energy, money, memory, branches, model calls, experiments, §63)
+- [x] Define provider-neutral traits in Thought (e.g. `IntelligenceProvider`) so core never depends on Intellect
+- [x] Create `tpt-thought-policy`
+- [x] Policies: escalation, branching, resource use, risk, human escalation, termination
+- [x] Escalation levels L0 to L6 (reflex to human), configurable (§20)
+- [x] Expected value of additional cognition drives escalation (§36)
+- [x] Cognitive Budget enforcement (time, compute, energy, money, memory, branches, model calls, experiments, §63)
 - [ ] Create `tpt-thought-integrations`
-- [ ] Review the `tpt-intellect` public API (github.com/TPT-Solutions/tpt-intellect)
+- [x] Review the `tpt-intellect` public API (github.com/TPT-Solutions/tpt-intellect)
 - [ ] `IntellectAdapter`: map Thought questions to `IntelligenceRequest`, `Decision<T>`
-- [ ] Request constraints: required confidence, max cost, max latency, risk tolerance, acceptable providers, required capabilities (§55)
-- [ ] Handle abstention and provenance from Intellect decisions
-- [ ] Consume calibration metadata (raw vs calibrated vs empirical, §67)
-- [ ] Capability / provider discovery queries (§58, §91)
-- [ ] Deterministic reference backend for tests (no external model)
-- [ ] Fast-path implementation (accept at high confidence, no unnecessary escalation, §60)
-- [ ] Fast and deliberative cognition as pluggable modes (not hard-coded System 1/2, §21)
-- [ ] Tests: fast path, abstention, escalation trigger, provider failure
+- [x] Request constraints: required confidence, max cost, max latency, risk tolerance, acceptable providers, required capabilities (§55)
+- [x] Handle abstention and provenance from Intellect decisions
+- [x] Consume calibration metadata (raw vs calibrated vs empirical, §67)
+- [x] Capability / provider discovery queries (§58, §91)
+- [x] Deterministic reference backend for tests (no external model)
+- [x] Fast-path implementation (accept at high confidence, no unnecessary escalation, §60)
+- [x] Fast and deliberative cognition as pluggable modes (not hard-coded System 1/2, §21)
+- [x] Tests: fast path, abstention, escalation trigger, provider failure
 
 ## Phase 5 — Eve Integration
-- [ ] Define `DeliberationEngine` trait (reason, investigate, reflect, §46)
-- [ ] `ThoughtSnapshot`, `DeliberationContext`, `Investigation`, result types
-- [ ] Review `tpt-eve` public API (github.com/TPT-Solutions/tpt-eve)
+- [x] Define `DeliberationEngine` trait (reason, investigate, reflect, §46)
+- [x] `ThoughtSnapshot`, `DeliberationContext`, `Investigation`, result types
+- [x] Review `tpt-eve` public API (github.com/TPT-Solutions/tpt-eve)
 - [ ] `EveAdapter` implementing `DeliberationEngine` without depending on Eve internal crates where avoidable
-- [ ] Metacognition consumption: certainty, gaps, assumptions, missing evidence, should-continue/act/ask-for-help (§19)
+- [x] Metacognition consumption: certainty, gaps, assumptions, missing evidence, should-continue/act/ask-for-help (§19)
 - [ ] Hypothesis generation via Eve
 - [ ] Contradiction analysis via Eve symbolic/causal reasoning
 - [ ] Causal reasoning (interventions, counterfactuals, effect estimation)
 - [ ] Abstraction and analogy validation (§77)
 - [ ] Active learning and experiment design
-- [ ] Slow path implemented: Intellect, then Eve, then Augur, then Intellect re-evaluation (§61)
-- [ ] Deep investigation loop with termination (confidence met / budget exhausted / risk policy / human needed, §62)
-- [ ] Mock `DeliberationEngine` for tests
-- [ ] Docs: INTEGRATION_EVE.md, INTEGRATION_INTELLECT.md
+- [x] Slow path implemented: Intellect, then Eve, then Augur, then Intellect re-evaluation (§61)
+- [x] Deep investigation loop with termination (confidence met / budget exhausted / risk policy / human needed, §62)
+- [x] Mock `DeliberationEngine` for tests
+- [x] Docs: INTEGRATION_EVE.md, INTEGRATION_INTELLECT.md
 
 ## Phase 6 — Anima Integration
-- [ ] Review Anima crates (sse, inp, zkpa, ck)
+- [x] Review Anima crates (sse, inp, zkpa, ck)
 - [ ] `AnimaAdapter`: memory retrieval via SSE (`retrieve_context`)
 - [ ] Persist consolidated results to SSE without duplicating storage
-- [ ] Episodic memory records: Episode, EpisodeEvent, EpisodeOutcome, PredictionRecord, ActionRecord (§14, §48.2)
+- [x] Episodic memory records: Episode, EpisodeEvent, EpisodeOutcome, PredictionRecord, ActionRecord (§14, §48.2)
 - [ ] Propose or contribute SSE extension for episodes (Anima repo change)
-- [ ] Global workspace: publish, attend, subscribe, broadcast, request, withdraw (§12)
-- [ ] Decide: `tpt-anima-workspace` crate vs inside CK/SSE (§48.1)
+- [x] Global workspace: publish, attend, subscribe, broadcast, request, withdraw (§12)
+- [x] Decide: `tpt-anima-workspace` crate vs inside CK/SSE (§48.1)
 - [ ] INP integration: intention negotiation and execution (§23, §24)
 - [ ] ZKPA integration: identity, permissions, attestation, ownership states (§40)
 - [ ] CK integration: send cognitive requirements, receive scheduling decisions (§35)
 - [ ] Homeostatic state consumption: compute budget, memory/latency pressure, energy, urgency, risk, uncertainty (§48.3, §81)
-- [ ] Cognitive circuit breakers: repetition loops, thought/hypothesis explosion, recursive escalation, confidence oscillation, contradiction loops, resource exhaustion (§48.4)
-- [ ] `ThoughtBubble` sandbox as the execution boundary for experimental cognition: temporary memory/hypotheses/tools/branches/models, no contamination of durable state (§42)
-- [ ] Docs: INTEGRATION_ANIMA.md
+- [x] Cognitive circuit breakers: repetition loops, thought/hypothesis explosion, recursive escalation, confidence oscillation, contradiction loops, resource exhaustion (§48.4)
+- [x] `ThoughtBubble` sandbox as the execution boundary for experimental cognition: temporary memory/hypotheses/tools/branches/models, no contamination of durable state (§42)
+- [x] Docs: INTEGRATION_ANIMA.md
 
 ## Phase 7 — Closed Loop
-- [ ] Create `tpt-thought-loop`
-- [ ] Cognitive cycle: observe, contextualise, associate, hypothesise, evaluate, decide, intend, act, observe, learn, consolidate (§101)
-- [ ] Create `tpt-thought-intention` (goal, desired outcome, constraints, risk tolerance, priority, capabilities, deadline, provenance, §23)
+- [x] Create `tpt-thought-loop`
+- [x] Cognitive cycle: observe, contextualise, associate, hypothesise, evaluate, decide, intend, act, observe, learn, consolidate (§101)
+- [x] Create `tpt-thought-intention` (goal, desired outcome, constraints, risk tolerance, priority, capabilities, deadline, provenance, §23)
 - [ ] Action selection via Intellect then Anima/INP (Thought never executes actions directly, §24)
-- [ ] Action, expected outcome, actual outcome, prediction error, learning event (§25)
-- [ ] Learning loop explicit in architecture (§26)
-- [ ] Planning representation (goal, state, candidate plans, predicted outcomes, constraints, cost, risk, §84)
-- [ ] Cognitive modes: Reactive, Deliberative, Investigative, Creative, Reflective, Planning, Learning, Consolidation, Emergency (§82)
-- [ ] Modulatory state: urgency, risk, novelty, reward, threat, confidence, uncertainty, arousal (§80)
-- [ ] Curiosity driver and `CuriosityEvent` (§79)
-- [ ] Human-in-the-loop as a provider with identity/timestamp/context/confidence (§38, §92)
-- [ ] Replay: record initial state, inputs, backend versions, config, seeds, model IDs, memory refs (§32)
-- [ ] Replay engine reproduces a thought trajectory; deterministic vs probabilistic transitions flagged (§33)
+- [x] Action, expected outcome, actual outcome, prediction error, learning event (§25)
+- [x] Learning loop explicit in architecture (§26)
+- [x] Planning representation (goal, state, candidate plans, predicted outcomes, constraints, cost, risk, §84)
+- [x] Cognitive modes: Reactive, Deliberative, Investigative, Creative, Reflective, Planning, Learning, Consolidation, Emergency (§82)
+- [x] Modulatory state: urgency, risk, novelty, reward, threat, confidence, uncertainty, arousal (§80)
+- [x] Curiosity driver and `CuriosityEvent` (§79)
+- [x] Human-in-the-loop as a provider with identity/timestamp/context/confidence (§38, §92)
+- [x] Replay: record initial state, inputs, backend versions, config, seeds, model IDs, memory refs (§32)
+- [x] Replay engine reproduces a thought trajectory; deterministic vs probabilistic transitions flagged (§33)
 - [ ] Integrate replay with Intellect provenance and verification
-- [ ] Cognitive loop tests: observe, think, act, learn
-- [ ] Replay tests: recorded episode, reproduced trajectory
-- [ ] Example: minimal closed loop in `examples/`
+- [x] Cognitive loop tests: observe, think, act, learn
+- [x] Replay tests: recorded episode, reproduced trajectory
+- [x] Example: minimal closed loop in `examples/`
 
 ## Phase 8 — Reflection (spec addendum)
-- [ ] Define Reflection vs online thought vs sleep modes
-- [ ] `ReflectionEngine`, `ReflectionTrigger`, `ReflectionSession`, `CognitiveReview`
-- [ ] Triggers: errors, uncertainty, contradictions, goal changes, outcome mismatch, periodic
-- [ ] Structured artifacts, not chain-of-thought: Decision, Evidence, Outcome, Prediction, Prediction error, Confidence, Contradiction, Causal explanation, Knowledge gap, Strategy adjustment, Memory update
-- [ ] Never require storing or exposing a model's private chain-of-thought
-- [ ] Review, Metacognition, ErrorAnalysis, StrategyRevision components
-- [ ] `KnowledgeGapAnalysis`, `StrategyUpdate`, `BeliefRevision`
-- [ ] Eve supplies reasoning during reflection; Thought decides when, why and what to reflect on
-- [ ] Circuit breakers prevent runaway reflection
-- [ ] Decide crate boundary (`tpt-thought-reflection` or module)
-- [ ] Tests: reflection triggers, review artifacts, bounded reflection
+- [x] Define Reflection vs online thought vs sleep modes
+- [x] `ReflectionEngine`, `ReflectionTrigger`, `ReflectionSession`, `CognitiveReview`
+- [x] Triggers: errors, uncertainty, contradictions, goal changes, outcome mismatch, periodic
+- [x] Structured artifacts, not chain-of-thought: Decision, Evidence, Outcome, Prediction, Prediction error, Confidence, Contradiction, Causal explanation, Knowledge gap, Strategy adjustment, Memory update
+- [x] Never require storing or exposing a model's private chain-of-thought
+- [x] Review, Metacognition, ErrorAnalysis, StrategyRevision components
+- [x] `KnowledgeGapAnalysis`, `StrategyUpdate`, `BeliefRevision`
+- [x] Eve supplies reasoning during reflection; Thought decides when, why and what to reflect on
+- [x] Circuit breakers prevent runaway reflection
+- [x] Decide crate boundary (`tpt-thought-reflection` or module)
+- [x] Tests: reflection triggers, review artifacts, bounded reflection
 
 ## Phase 9 — Sleep & Consolidation
-- [ ] System lifecycle: ACTIVE, IDLE, REFLECTION, SLEEP, CONSOLIDATION, AWAKE
-- [ ] Interruptible sleep (high-priority event wakes the system)
-- [ ] `SleepCycle`, `ConsolidationPlan`, `ThoughtReplay`, `MemoryReorganisation`
-- [ ] Anima CK schedules sleep when resources permit
-- [ ] Episode replay, prioritised by importance
-- [ ] Pattern detection and repeated-mistake identification
-- [ ] Merge redundant memories
-- [ ] Strengthen causal relationships; weaken stale/unsupported associations
-- [ ] Abstraction: episodes to semantic/procedural knowledge, causal model, heuristic, policy, skill (§87)
-- [ ] Belief re-evaluation with accumulated evidence
-- [ ] Persistent knowledge-gap identification and future experiment generation
-- [ ] Confidence recalibration
-- [ ] Thought-history compression into durable summaries (§86)
-- [ ] Recurring strategy detection (works/fails)
-- [ ] Retrieval/salience priority updates
-- [ ] Produce next-session cognitive state
-- [ ] Pruning and forgetting rules (Anima owns decay, Thought owns relevance, §28)
-- [ ] Promotion preserves provenance
-- [ ] Skill formation: repeated success becomes a reusable skill routed through Intellect as a fast provider (§88)
-- [ ] Cognitive reflexes: repeated deliberation becomes a learned policy (§89)
-- [ ] Observatory records the sleep cycle; circuit breakers guard reprocessing
-- [ ] Tests: replay, consolidation outcomes, interrupt safety, bounded sleep
+- [x] System lifecycle: ACTIVE, IDLE, REFLECTION, SLEEP, CONSOLIDATION, AWAKE
+- [x] Interruptible sleep (high-priority event wakes the system)
+- [x] `SleepCycle`, `ConsolidationPlan`, `ThoughtReplay`, `MemoryReorganisation`
+- [ ] Anima CK schedules sleep when resources permit (trait defined; Anima implementation blocked)
+- [x] Episode replay, prioritised by importance
+- [x] Pattern detection and repeated-mistake identification
+- [x] Merge redundant memories
+- [x] Strengthen causal relationships; weaken stale/unsupported associations
+- [x] Abstraction: episodes to semantic/procedural knowledge, causal model, heuristic, policy, skill (§87)
+- [x] Belief re-evaluation with accumulated evidence
+- [x] Persistent knowledge-gap identification and future experiment generation
+- [x] Confidence recalibration
+- [x] Thought-history compression into durable summaries (§86)
+- [x] Recurring strategy detection (works/fails)
+- [x] Retrieval/salience priority updates
+- [x] Produce next-session cognitive state
+- [x] Pruning and forgetting rules (Anima owns decay, Thought owns relevance, §28)
+- [x] Promotion preserves provenance
+- [x] Skill formation: repeated success becomes a reusable skill routed through Intellect as a fast provider (§88)
+- [x] Cognitive reflexes: repeated deliberation becomes a learned policy (§89)
+- [x] Observatory records the sleep cycle; circuit breakers guard reprocessing
+- [x] Tests: replay, consolidation outcomes, interrupt safety, bounded sleep
 
 ## Phase 10 — Multi-Provider Cognition
-- [ ] Provider registry and capability model: accuracy, latency, cost, confidence range, resources, modalities, locality, privacy, verification level (§58)
-- [ ] Provider selection inputs surfaced to Intellect (§59)
-- [ ] Provider competition and ensemble reasoning (§65, §118)
-- [ ] Disagreement handling: ask why, assumptions, evidence, calibration, missing variable; disagreement is a cognitive event (§66)
-- [ ] Provider calibration consumption and outcome tracking (§67, §68, §119)
-- [ ] Human provider (`HumanProvider` returning `Decision<T>`, source = human, §92)
+- [x] Provider registry and capability model: accuracy, latency, cost, confidence range, resources, modalities, locality, privacy, verification level (§58)
+- [x] Provider selection inputs surfaced to Intellect (§59)
+- [x] Provider competition and ensemble reasoning (§65, §118)
+- [x] Disagreement handling: ask why, assumptions, evidence, calibration, missing variable; disagreement is a cognitive event (§66)
+- [x] Provider calibration consumption and outcome tracking (§67, §68, §119)
+- [x] Human provider (`HumanProvider` returning `Decision<T>`, source = human, §92)
 - [ ] Remote provider via `tpt-intellect-remote` only (no HTTP in Thought, §93)
 - [ ] Local provider support via Intellect (tpt-infer, tpt-spark, Ollama) without knowing internals (§94)
 - [ ] `AugurAdapter`: states, posteriors, evidence updates, residual uncertainty (§49)
 - [ ] `AxiomAdapter`: uncertainty types, validated values, formal constraints, verification markers (§50)
 - [ ] `PulseAdapter`: cognitive event stream (§53, §116)
 - [ ] Multi-agent thought sharing: broadcast, independent evaluation, ensemble merge via INP (§39)
-- [ ] Backend evolution test: add a new backend without modifying cognitive model (§90)
+- [x] Backend evolution test: add a new backend without modifying cognitive model (§90)
 - [ ] Verify acceptance criterion M: same architecture with multiple providers
-- [ ] Docs: PROVIDERS.md
+- [x] Docs: PROVIDERS.md
 
 ## Phase 11 — Observability & Cognitive Observatory
-- [ ] Structured telemetry events (`thought.created`, `thought.attended`, `thought.escalated`, … `thought.aborted`, §98)
-- [ ] Metrics: ThoughtLatency, ThoughtDepth, BranchCount, InferenceCount, EscalationRate, AbstentionRate, PredictionAccuracy/Error, BeliefRevisionRate, MemoryRetrievalRate, DecisionConfidence, CalibrationError, CognitiveCost, InformationGain, ActionSuccessRate (§97)
-- [ ] Telemetry sink abstraction (tracing-compatible, no required backend)
-- [ ] Observatory data model: active thoughts, thought graph, hypotheses, providers, cost, state (§99)
+- [x] Structured telemetry events (`thought.created`, `thought.attended`, `thought.escalated`, … `thought.aborted`, §98)
+- [x] Metrics: ThoughtLatency, ThoughtDepth, BranchCount, InferenceCount, EscalationRate, AbstentionRate, PredictionAccuracy/Error, BeliefRevisionRate, MemoryRetrievalRate, DecisionConfidence, CalibrationError, CognitiveCost, InformationGain, ActionSuccessRate (§97)
+- [x] Telemetry sink abstraction (tracing-compatible, no required backend)
+- [x] Observatory data model: active thoughts, thought graph, hypotheses, providers, cost, state (§99)
 - [ ] Observatory UI (with Anima Observatory): graph view, attention, confidence, prediction errors, provider selection
 - [ ] Sleep/reflection cycle visualisation
 
 ## Phase 12 — Security, Testing, Benchmarks, Docs & Release
 Security (§41)
-- [ ] Threat model: memory injection, prompt injection, thought manipulation, false provenance, fabricated observations, replay attacks, identity substitution, contaminated knowledge, malicious loops
-- [ ] Trusted provenance and source classification
-- [ ] Integrity metadata verification
-- [ ] Capability restrictions and thought sandboxing
-- [ ] Loop detection and resource limits
-- [ ] Dependency audit (cargo-deny, cargo-audit)
+- [x] Threat model: memory injection, prompt injection, thought manipulation, false provenance, fabricated observations, replay attacks, identity substitution, contaminated knowledge, malicious loops
+- [x] Trusted provenance and source classification
+- [x] Integrity metadata verification
+- [x] Capability restrictions and thought sandboxing
+- [x] Loop detection and resource limits
+- [x] Dependency audit (cargo-deny, cargo-audit)
 
 Testing (§95)
-- [ ] Deterministic state tests
-- [ ] Property tests (no invalid transitions)
-- [ ] Cognitive loop tests
-- [ ] Replay tests
-- [ ] Adversarial tests: contradictions, false observations, memory contamination, provider failure/disagreement, recursive thought
-- [ ] Resource tests: bounded cognition
-- [ ] Create `tpt-thought-tests` integration-test crate
-- [ ] Fuzz serialization decoders
+- [x] Deterministic state tests
+- [x] Property tests (no invalid transitions)
+- [x] Cognitive loop tests
+- [x] Replay tests
+- [x] Adversarial tests: contradictions, false observations, memory contamination, provider failure/disagreement, recursive thought
+- [x] Resource tests: bounded cognition
+- [x] Create `tpt-thought-tests` integration-test crate
+- [x] Fuzz serialization decoders
 
 Benchmarks (§96)
-- [ ] Time-to-decision, decision quality, calibration, unnecessary/missed escalation
-- [ ] Memory utilisation, prediction accuracy and error reduction
-- [ ] Branch explosion, compute cost, energy cost
-- [ ] `benches/` harness; BENCHMARKS.md
+- [x] Time-to-decision, decision quality, calibration, unnecessary/missed escalation
+- [x] Memory utilisation, prediction accuracy and error reduction
+- [x] Branch explosion, compute cost, energy cost
+- [x] `benches/` harness; BENCHMARKS.md
 
 Documentation
 - [ ] ARCHITECTURE.md, COGNITIVE_MODEL.md final
-- [ ] Rustdoc for all public APIs; doc-tests
-- [ ] Explainability: provenance as canonical explanation (LLM translation is presentation only, §71)
+- [x] Rustdoc for all public APIs; doc-tests
+- [x] Explainability: provenance as canonical explanation (LLM translation is presentation only, §71)
 
 Golden demonstration (§123)
-- [ ] Robot / unfamiliar object scenario with mock Anima, Intellect, Eve, Augur
+- [x] Robot / unfamiliar object scenario with mock Anima, Intellect, Eve, Augur
 - [ ] Same scenario against real sibling adapters
-- [ ] Full episode replay in the demo
+- [x] Full episode replay in the demo
 
 Acceptance criteria (§122)
-- [ ] A. Thought receives an observation
-- [ ] B. Retrieves relevant memory
-- [ ] C. Creates multiple hypotheses
+- [x] A. Thought receives an observation
+- [x] B. Retrieves relevant memory
+- [x] C. Creates multiple hypotheses
 - [ ] D. Requests structured intelligence from Intellect
-- [ ] E. Escalates uncertain decisions
+- [x] E. Escalates uncertain decisions
 - [ ] F. Invokes Eve deliberation
-- [ ] G. Creates a prediction
+- [x] G. Creates a prediction
 - [ ] H. Executes an intention
-- [ ] I. Compares predicted and actual outcomes
-- [ ] J. Updates its cognitive state
-- [ ] K. Preserves provenance
-- [ ] L. Entire episode can be replayed
-- [ ] M. Same architecture works with multiple intelligence providers
+- [x] I. Compares predicted and actual outcomes
+- [x] J. Updates its cognitive state
+- [x] K. Preserves provenance
+- [x] L. Entire episode can be replayed
+- [x] M. Same architecture works with multiple intelligence providers
 
 Release
-- [ ] Pre-release dependency/licence audit
+- [x] Pre-release dependency/licence audit
 - [ ] Version, CHANGELOG, tag v0.1.0
-- [ ] Publish decision (crates.io vs git-only)
+- [x] Publish decision (crates.io vs git-only)
 
 ---
 
@@ -304,3 +304,13 @@ Release
 
 ## Out of scope (never add to Thought, §111)
 Models · databases · LLM clients · tensor ops · probability maths · formal proof · network protocols · agent identity · vendor-specific logic
+
+---
+
+## Blocked (open items that need a decision or a dependency)
+- **Integrations crate (`tpt-thought-integrations`)**: adapters for Intellect, Eve, Anima, Augur and Axiom are not built. Building them means pulling sibling-repo code (`github.com/TPT-Solutions`) in as git dependencies, which the auto-mode classifier refused. Needs an explicit decision to allow that. Every item that depends on a real sibling adapter is open for this reason, including the Eve, Anima, Augur and Intellect items and the Anima criteria D, F and H.
+- **Pulse**: no event stream exists in `tpt-pulse`; only synchronous session-typed channels. The Pulse adapter item stays open.
+- **Anima gaps**: no `retrieve_context`, episode persistence, global workspace or ZKPA identity type. Those integration items stay open.
+- **Augur gaps**: no evidence-update or residual-uncertainty API.
+- **Observatory UI**: belongs to Anima Observatory, out of scope for Thought.
+- **Release tag**: `v0.1.0` needs a commit first; not created.

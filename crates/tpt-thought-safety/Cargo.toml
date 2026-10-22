@@ -1,0 +1,21 @@
+[package]
+name = "tpt-thought-safety"
+description = "TPT Thought: tpt-thought-safety (see todo.md)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+tpt-thought-core = { workspace = true }
+serde = { workspace = true }
+tpt-thought-provenance = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+
+[lints]
+workspace = true

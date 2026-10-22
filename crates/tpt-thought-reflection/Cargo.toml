@@ -1,0 +1,20 @@
+[package]
+name = "tpt-thought-reflection"
+description = "TPT Thought reflection: bounded review of past thoughts, triggers and structured artifacts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+tpt-thought-core = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+
+[lints]
+workspace = true

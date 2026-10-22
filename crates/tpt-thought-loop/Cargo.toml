@@ -1,0 +1,30 @@
+[package]
+name = "tpt-thought-loop"
+description = "TPT Thought closed loop: cognitive cycle, modes, modulation, curiosity, planning, slow path and replay"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+tpt-thought-core = { workspace = true }
+tpt-thought-state = { workspace = true }
+tpt-thought-intention = { path = "../tpt-thought-intention", version = "0.1.0" }
+tpt-thought-hypothesis = { workspace = true }
+tpt-thought-prediction = { workspace = true }
+tpt-thought-providers = { workspace = true }
+tpt-thought-deliberation = { workspace = true }
+tpt-thought-observatory = { workspace = true }
+tpt-thought-safety = { workspace = true }
+tpt-thought-workspace = { workspace = true }
+tpt-thought-provenance = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
