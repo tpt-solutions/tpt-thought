@@ -8,13 +8,27 @@
 //!   opens one per task and revokes it when the task ends. Sessions expire by time as well.
 //! - Delegation: a parent agent grants child agents named permissions, and may only grant what it
 //!   holds itself. Revoking a delegation takes effect at once.
+//! - Attestation: hardware evidence from Anima's platform probes. Anima's `verify_attestation` only
+//!   checks the shape of the result (a 32-byte digest and the `verified` flag). It does not check a
+//!   platform signature, so [`AnimaIdentity::check_attestation`] names that in its marker.
+//! - Proofs: Groth16 proofs of authorization. [`AnimaIdentity::verify_proof`] runs Anima's real
+//!   Groth16 check, but against the verifying key embedded in the proof. Anima does not expose a
+//!   trusted key, so a valid result shows internal consistency, not a trusted setup.
 //!
-//! Not mapped: hardware attestation, zero-knowledge proofs and the agency ledger. Thought does not
-//! yet produce attestation evidence or hold a ledger, so those stay with Anima.
+//! Attestation and proof results are returned as strings for the provenance `verification` field,
+//! so Thought's provenance types do not depend on this module.
+//!
+//! Not mapped: ownership states and the agency ledger. Anima has no ownership model: its
+//! delegation grants permissions, not responsibility for a thought, so it cannot stand in for
+//! `ThoughtOwnership::Delegated`. Ownership stays with Thought. The ledger is not in §40, and Thought
+//! does not hold one.
 
 use std::time::Duration;
 
-use tpt_anima_zkpa::{DelegationManager, SessionManager, ZkpaError};
+use tpt_anima_zkpa::{
+    AttestationPlatform, AttestationService, DelegationManager, HardwareAttestation,
+    ProofGenerator, ProofSystem, SessionManager, ZKCircuit, ZKProof, ZkpaError,
+};
 use uuid::Uuid;
 
 /// Why an identity operation was refused.
@@ -113,11 +127,80 @@ impl AnimaIdentity {
     pub fn revoke_delegation(&mut self, parent: Uuid, child: Uuid) -> Result<(), IdentityError> {
         self.delegations.revoke(parent, child).map_err(refused)
     }
+
+    /// Collect hardware evidence for `platform` over `evidence`. Anima probes the platform first, so
+    /// success means the probe passed on this machine. Platforms Anima has no backend for (AMD
+    /// Secure, AWS Nitro, Azure Confidential) are refused.
+    pub fn attest(
+        &self,
+        platform: AttestationPlatform,
+        evidence: &[u8],
+    ) -> Result<HardwareAttestation, IdentityError> {
+        let service = AttestationService::new();
+        let result = match platform {
+            AttestationPlatform::TPM => service.attest_tpm(evidence),
+            AttestationPlatform::TrustZone => service.attest_trustzone(evidence),
+            AttestationPlatform::SGX => service.attest_sgx(evidence),
+            AttestationPlatform::NVIDIACC => service.attest_nvidia_cc(evidence),
+            AttestationPlatform::AppleSE => service.attest_apple_se(evidence),
+            AttestationPlatform::AMDSecure
+            | AttestationPlatform::AWSNitro
+            | AttestationPlatform::AzureConfidential => {
+                return Err(IdentityError::Refused(format!(
+                    "tpt-anima-zkpa has no {platform:?} attestation backend"
+                )));
+            }
+        };
+        result.map_err(refused)
+    }
+
+    /// Check an attestation with Anima's `verify_attestation` and return its provenance marker. The
+    /// check is structural only, so the marker says so. It does not prove the platform signed the
+    /// evidence.
+    pub fn check_attestation(
+        &self,
+        attestation: &HardwareAttestation,
+    ) -> Result<String, IdentityError> {
+        AttestationService::new()
+            .verify_attestation(attestation)
+            .map_err(refused)?;
+        Ok(format!(
+            "zkpa:attestation:{:?}:structural",
+            attestation.platform
+        ))
+    }
+
+    /// Prove, with a Groth16 proof from Anima, that `agent` holds `permissions`. The proof commits to
+    /// the inputs with MiMC, so a verifier learns that a preimage exists but not what it is.
+    pub fn prove_authorization(
+        &self,
+        agent: Uuid,
+        permissions: &[&str],
+    ) -> Result<ZKProof, IdentityError> {
+        let permissions: Vec<String> = permissions.iter().map(|p| (*p).to_string()).collect();
+        let circuit = ZKCircuit {
+            circuit_type: "authorization".to_string(),
+            proof_system: ProofSystem::Groth16,
+        };
+        ProofGenerator::new()
+            .generate_authorization_proof(agent.as_bytes(), &permissions, &circuit)
+            .map_err(refused)
+    }
+
+    /// Verify a proof with Anima's `ProofGenerator::verify` and return its provenance marker. The
+    /// check uses the verifying key and public inputs inside the proof. It does not check the proof
+    /// against a key Thought trusts, and it does not bind the proof to a particular agent.
+    pub fn verify_proof(&self, proof: &ZKProof) -> Result<String, IdentityError> {
+        ProofGenerator::new().verify(proof).map_err(refused)?;
+        Ok(format!("zkpa:proof:{}:groth16-verified", proof.proof_type))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tpt_thought_core::{IdGenerator, SeededEntropy, Timestamp};
+    use tpt_thought_provenance::{ProvenanceBody, ProvenanceSource, ProvenanceStore};
 
     fn agent(n: u128) -> Uuid {
         Uuid::from_u128(n)
@@ -162,6 +245,114 @@ mod tests {
         assert!(!identity.is_authorized(root, child, "delete"));
         identity.revoke_delegation(root, child).unwrap();
         assert!(!identity.is_authorized(root, child, "read"));
+    }
+
+    #[test]
+    fn attestation_without_an_anima_backend_is_refused() {
+        let identity = AnimaIdentity::new();
+        let err = identity
+            .attest(AttestationPlatform::AMDSecure, b"report")
+            .unwrap_err();
+        assert!(matches!(err, IdentityError::Refused(reason) if reason.contains("AMDSecure")));
+    }
+
+    #[test]
+    fn attestation_probes_are_passed_through_and_marked() {
+        let identity = AnimaIdentity::new();
+        let platforms = [
+            AttestationPlatform::TPM,
+            AttestationPlatform::TrustZone,
+            AttestationPlatform::SGX,
+            AttestationPlatform::NVIDIACC,
+            AttestationPlatform::AppleSE,
+        ];
+        for platform in platforms {
+            let label = format!("{platform:?}");
+            // Each probe fails honestly on machines without the hardware, so both outcomes are
+            // checked: a refusal is accepted, and a success must carry the structural marker.
+            match identity.attest(platform, b"evidence") {
+                Ok(attestation) => {
+                    let marker = identity.check_attestation(&attestation).unwrap();
+                    assert_eq!(marker, format!("zkpa:attestation:{label}:structural"));
+                }
+                Err(IdentityError::Refused(_)) => {}
+                Err(other) => panic!("unexpected error for {label}: {other}"),
+            }
+        }
+    }
+
+    #[test]
+    fn malformed_or_unverified_attestations_are_not_marked() {
+        let identity = AnimaIdentity::new();
+        let forged = HardwareAttestation {
+            platform: AttestationPlatform::TPM,
+            attestation_data: vec![1, 2, 3],
+            timestamp: std::time::SystemTime::now(),
+            verified: true,
+        };
+        assert!(matches!(
+            identity.check_attestation(&forged),
+            Err(IdentityError::Refused(_))
+        ));
+        let unflagged = HardwareAttestation {
+            attestation_data: vec![0; 32],
+            verified: false,
+            ..forged
+        };
+        assert!(identity.check_attestation(&unflagged).is_err());
+    }
+
+    #[test]
+    fn authorization_proofs_verify_and_are_marked() {
+        let identity = AnimaIdentity::new();
+        let proof = identity
+            .prove_authorization(agent(1), &["read", "write"])
+            .unwrap();
+        assert_eq!(proof.proof_type, "authorization");
+        assert_eq!(
+            identity.verify_proof(&proof).unwrap(),
+            "zkpa:proof:authorization:groth16-verified"
+        );
+    }
+
+    #[test]
+    fn tampered_proofs_are_not_marked() {
+        let identity = AnimaIdentity::new();
+        let mut proof = identity.prove_authorization(agent(1), &["read"]).unwrap();
+        // The last public input byte is the commitment, so changing it breaks the Groth16 check.
+        let last = proof.public_inputs.len() - 1;
+        proof.public_inputs[last] ^= 0x01;
+        assert!(matches!(
+            identity.verify_proof(&proof),
+            Err(IdentityError::Refused(_))
+        ));
+    }
+
+    #[test]
+    fn markers_fit_the_provenance_verification_field() {
+        let identity = AnimaIdentity::new();
+        let proof = identity.prove_authorization(agent(1), &["read"]).unwrap();
+        let marker = identity.verify_proof(&proof).unwrap();
+
+        let ids = IdGenerator::new(SeededEntropy::new(3));
+        let mut store = ProvenanceStore::new();
+        let body = ProvenanceBody {
+            id: ids.provenance(),
+            source: ProvenanceSource::Verification,
+            thought: None,
+            parents: vec![],
+            evidence: vec![],
+            memory: vec![],
+            provider: Some("tpt-anima-zkpa".into()),
+            model: None,
+            version: None,
+            reasoning_path: vec![],
+            verification: Some(marker.clone()),
+            timestamp: Timestamp(1),
+        };
+        let record = store.insert(body).unwrap();
+        assert_eq!(record.body.verification.as_deref(), Some(marker.as_str()));
+        assert!(store.verify().is_ok());
     }
 
     #[test]
