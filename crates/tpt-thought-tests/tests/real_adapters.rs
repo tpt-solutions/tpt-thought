@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use common::*;
 use tpt_thought_core::StructuredValue;
-use tpt_thought_deliberation::InvestigationPolicy;
+use tpt_thought_deliberation::{InvestigationPolicy, Termination};
 use tpt_thought_integrations::eve::EveAdapter;
 use tpt_thought_integrations::intellect::reference_provider;
 use tpt_thought_loop::{CognitiveLoop, SlowStage};
@@ -84,8 +84,9 @@ fn real_d_intellect_is_consulted_and_recorded_as_source() {
     }
 }
 
-/// F (real): the real Eve adapter does not implement `investigate`, so the loop's slow path must
-/// skip Eve. This asserts that gap through the loop. It does not show Eve deliberating.
+/// F (real): the real Eve adapter implements `investigate`, so the loop's slow path runs an Eve
+/// investigation. Eve holds no facts about the grasp, so it reports unknown confidence and maximal
+/// risk, and the investigation policy stops on risk.
 #[test]
 fn real_f_eve_adapter_declines_investigation() {
     let mut config = reactive_config(6);
@@ -102,6 +103,6 @@ fn real_f_eve_adapter_declines_investigation() {
 
     let report = lp.run(&grasp_input(50)).expect("cycle");
 
-    assert!(!report.slow_stages.contains(&SlowStage::Eve));
-    assert!(report.investigation.is_none());
+    assert!(report.slow_stages.contains(&SlowStage::Eve));
+    assert_eq!(report.investigation, Some(Termination::RiskPolicy));
 }

@@ -5,7 +5,7 @@
 //! The adapter owns the Eve layers it uses and feeds them the facts, observations and causal
 //! relations that Thought supplies. Eve has no single deliberation entry point, so each Thought
 //! capability maps onto one layer. Capabilities with no Eve counterpart keep the trait's
-//! `Unsupported` default: reasoning, investigation and query ranking.
+//! `Unsupported` default: reasoning and query ranking.
 
 use std::collections::{HashMap, HashSet};
 
@@ -16,13 +16,13 @@ use tpt_eve_core::{CausalRelationDraft, CausalRelationKind, Fact, Value};
 use tpt_eve_metacognition::MetaCognitionEngine;
 use tpt_eve_symbolic::ConsistencyChecker;
 use tpt_thought_core::{
-    Confidence, Hypothesis, HypothesisId, IdGenerator, Probability, SeededEntropy,
+    Confidence, Hypothesis, HypothesisId, IdGenerator, Probability, SeededEntropy, Uncertainty,
 };
 use tpt_thought_deliberation::{
     AbstractionRequest, AbstractionVerdict, Capability, CausalAnalysis, CausalQuery, CausalRequest,
     Claim, Conflict, ContradictionAnalysis, ContradictionRequest, DeliberationContext,
     DeliberationEngine, DeliberationError, ExperimentPlan, ExperimentRequest, HypothesisRequest,
-    Metacognition, NextAction, Resolution, Validity,
+    Investigation, InvestigationOutcome, Metacognition, NextAction, Resolution, Validity,
 };
 
 /// Knowledge gaps are reported for facts below this confidence.
@@ -123,6 +123,64 @@ impl EveAdapter {
 }
 
 impl DeliberationEngine for EveAdapter {
+    /// One investigation step reads the metacognition layer's view of the facts supplied so far.
+    ///
+    /// Eve cannot acquire evidence, so a step reports what it knows and nothing more:
+    /// - `confidence` is the mean current confidence of the supplied facts, the best Eve has on
+    ///   the question. With no facts it is unknown, not zero, since nothing was measured.
+    /// - `uncertainty` is the residual gap `1 - confidence`, as epistemic uncertainty because it
+    ///   comes from missing knowledge. With no facts the whole answer is marked unknown.
+    /// - `risk` is the share of facts below [`GAP_THRESHOLD`], since acting on an answer that
+    ///   rests on uncertain facts carries that share of risk. With no facts it is `1.0`.
+    /// - `needs_human` is set when any knowledge gap remains. Eve closes gaps only from facts it
+    ///   is given, so a remaining gap, or having no facts at all, needs a human source.
+    ///
+    /// The state does not change between steps, so the same outcome repeats. A run therefore
+    /// either stops on its first step (by risk, human need or confidence) or runs to the step cap.
+    fn investigate(
+        &mut self,
+        _ctx: &DeliberationContext,
+        _request: &Investigation,
+    ) -> Result<InvestigationOutcome, DeliberationError> {
+        let records = self.metacognition.records();
+        if records.is_empty() {
+            return Ok(InvestigationOutcome {
+                findings: vec!["no facts supplied to Eve for this question".into()],
+                confidence: Confidence::UNKNOWN,
+                uncertainty: Uncertainty::unknown(),
+                risk: Probability::ONE,
+                needs_human: true,
+            });
+        }
+        let count = records.len() as f64;
+        let mean = records
+            .iter()
+            .map(|record| f64::from(record.current()))
+            .sum::<f64>()
+            / count;
+        let uncertain = records
+            .iter()
+            .filter(|record| record.current() < GAP_THRESHOLD)
+            .count();
+        let gaps = self.metacognition.detect_gaps(GAP_THRESHOLD);
+        let needs_human = !gaps.is_empty();
+        let findings = if needs_human {
+            gaps.into_iter().map(|gap| gap.description).collect()
+        } else {
+            vec!["no knowledge gap above the threshold".into()]
+        };
+        Ok(InvestigationOutcome {
+            findings,
+            confidence: probability(mean).map_or(Confidence::UNKNOWN, Confidence::from_raw),
+            uncertainty: Uncertainty {
+                epistemic: probability(1.0 - mean).map(Probability::get),
+                ..Uncertainty::default()
+            },
+            risk: probability(uncertain as f64 / count).unwrap_or(Probability::ONE),
+            needs_human,
+        })
+    }
+
     fn reflect(&mut self, _ctx: &DeliberationContext) -> Result<Metacognition, DeliberationError> {
         let gaps: Vec<String> = self
             .metacognition
@@ -422,9 +480,12 @@ fn parse_claim(claim: &Claim) -> Result<ParsedClaim, DeliberationError> {
 
 /// Eve's intervention confidence is a rough score in `0..=1`; anything outside that is unknown.
 fn causal_confidence(value: f64) -> Confidence {
-    Probability::new(value.clamp(0.0, 1.0))
-        .ok()
-        .map_or(Confidence::UNKNOWN, Confidence::from_raw)
+    probability(value).map_or(Confidence::UNKNOWN, Confidence::from_raw)
+}
+
+/// A probability from a value clamped to `0..=1`, or `None` for NaN.
+fn probability(value: f64) -> Option<Probability> {
+    Probability::new(value.clamp(0.0, 1.0)).ok()
 }
 
 fn fitted_model_assumptions() -> Vec<String> {
@@ -440,7 +501,9 @@ mod tests {
     use tpt_thought_core::{
         CognitiveBudget, StructuredValue, Thought, ThoughtContent, ThoughtOrigin, Timestamp,
     };
-    use tpt_thought_deliberation::{ContradictionRequest, ThoughtSnapshot};
+    use tpt_thought_deliberation::{
+        run_investigation, ContradictionRequest, InvestigationPolicy, Termination, ThoughtSnapshot,
+    };
 
     fn context() -> DeliberationContext {
         let ids = IdGenerator::new(SeededEntropy::new(1));
@@ -462,6 +525,74 @@ mod tests {
         eve.assert_fact("kettle", "is", "hot");
         let report = eve.reflect(&context()).unwrap();
         assert!(report.certainty.is_some());
+    }
+
+    fn investigate_once(eve: &mut EveAdapter) -> InvestigationOutcome {
+        let request = Investigation {
+            question: "can the gripper grasp?".into(),
+            step: 0,
+        };
+        eve.investigate(&context(), &request).unwrap()
+    }
+
+    #[test]
+    fn investigation_without_facts_needs_a_human() {
+        let mut eve = EveAdapter::new(7);
+        let outcome = investigate_once(&mut eve);
+        assert_eq!(outcome.confidence, Confidence::UNKNOWN);
+        assert!(outcome.uncertainty.unknown);
+        assert_eq!(outcome.risk.get(), 1.0);
+        assert!(outcome.needs_human);
+    }
+
+    #[test]
+    fn investigation_reports_full_confidence_from_asserted_facts() {
+        let mut eve = EveAdapter::new(8);
+        // Each object is also a subject, so no entity is left unexplained.
+        eve.assert_fact("gripper", "describes", "cup");
+        eve.assert_fact("cup", "describes", "gripper");
+        let outcome = investigate_once(&mut eve);
+        assert_eq!(outcome.confidence.best().map(Probability::get), Some(1.0));
+        assert_eq!(outcome.uncertainty.epistemic, Some(0.0));
+        assert_eq!(outcome.risk.get(), 0.0);
+        assert!(!outcome.needs_human);
+    }
+
+    #[test]
+    fn low_confidence_facts_are_gaps_that_need_a_human() {
+        let mut eve = EveAdapter::new(9);
+        let mut fact = Fact::asserted(
+            Value::Symbol("kettle".into()),
+            Value::Symbol("is".into()),
+            Value::Symbol("hot".into()),
+        );
+        fact.confidence = 0.2;
+        eve.metacognition.add_fact(fact);
+        let outcome = investigate_once(&mut eve);
+        let confidence = outcome.confidence.best().expect("a confidence").get();
+        assert!(
+            (confidence - 0.2).abs() < 1e-6,
+            "confidence was {confidence}"
+        );
+        let epistemic = outcome.uncertainty.epistemic.expect("a residual gap");
+        assert!((epistemic - 0.8).abs() < 1e-6, "epistemic was {epistemic}");
+        assert_eq!(outcome.risk.get(), 1.0);
+        assert!(outcome.needs_human);
+        assert!(!outcome.findings.is_empty());
+    }
+
+    #[test]
+    fn investigation_without_facts_stops_on_risk() {
+        let mut eve = EveAdapter::new(10);
+        let policy = InvestigationPolicy::new(
+            Probability::new(0.9).unwrap(),
+            Probability::new(0.5).unwrap(),
+            3,
+        );
+        let run =
+            run_investigation(&mut eve, &context(), "can the gripper grasp?", &policy).unwrap();
+        assert_eq!(run.termination, Termination::RiskPolicy);
+        assert_eq!(run.outcomes.len(), 1);
     }
 
     #[test]
