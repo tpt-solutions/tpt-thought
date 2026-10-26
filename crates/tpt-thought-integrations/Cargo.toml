@@ -14,12 +14,14 @@ readme = "README.md"
 [features]
 default = []
 intellect = ["dep:tpt-intellect-core", "dep:tpt-intellect-backend"]
-eve = ["dep:tpt-eve-core", "dep:tpt-eve-metacognition", "dep:tpt-eve-causal", "dep:tpt-eve-abstraction", "dep:tpt-eve-active-learning"]
-anima = ["dep:tpt-anima-sse", "dep:tpt-anima-inp", "dep:tpt-anima-ck", "dep:tpt-thought-consolidation"]
+eve = ["dep:tpt-eve-core", "dep:tpt-eve-metacognition", "dep:tpt-eve-causal", "dep:tpt-eve-abstraction", "dep:tpt-eve-active-learning", "dep:tpt-eve-symbolic"]
+anima = ["dep:tpt-anima-sse", "dep:tpt-anima-inp", "dep:tpt-anima-ck", "dep:tpt-thought-consolidation", "dep:uuid"]
 augur = ["dep:tpt-augur-frontend", "dep:tpt-augur-ir", "dep:tpt-augur-runtime"]
-axiom = ["dep:tpt-axiom-core"]
+axiom = ["dep:tpt-axiom-core", "dep:tpt-axiom-ir", "dep:tpt-axiom-verify"]
 remote = ["intellect", "dep:tpt-intellect-remote"]
 local = ["remote", "dep:tpt-infer", "tpt-intellect-remote/infer"]
+pulse = ["dep:tpt-pulse-core", "dep:tpt-thought-observatory"]
+zkpa = ["dep:tpt-anima-zkpa", "dep:uuid"]
 
 [dependencies]
 tpt-thought-core = { workspace = true }
@@ -29,28 +31,36 @@ tpt-thought-workspace = { workspace = true }
 tpt-thought-consolidation = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+# Matches the `uuid` already in Cargo.lock through tpt-anima-ck; needed to name bubble handles.
+uuid = { version = "1", optional = true }
 
 # Sibling repositories, each pinned to the revision reviewed for this crate.
 # tpt-axiom is pinned to the commit that moved its cargo-generate template out of the way.
 # The template's placeholder manifest made cargo fail to scan that git source.
 tpt-intellect-core = { git = "https://github.com/TPT-Solutions/tpt-intellect", rev = "a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc", version = "0.1.0", optional = true }
 tpt-intellect-backend = { git = "https://github.com/TPT-Solutions/tpt-intellect", rev = "a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc", version = "0.1.0", optional = true }
-tpt-eve-core = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "c230d0e83633bd0a7f8d3e6a5d830f48236427ad", version = "0.1.0", optional = true }
-tpt-eve-metacognition = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "c230d0e83633bd0a7f8d3e6a5d830f48236427ad", version = "0.1.0", optional = true }
-tpt-eve-causal = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "c230d0e83633bd0a7f8d3e6a5d830f48236427ad", version = "0.1.0", optional = true }
-tpt-eve-abstraction = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "c230d0e83633bd0a7f8d3e6a5d830f48236427ad", version = "0.1.0", optional = true }
-tpt-eve-active-learning = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "c230d0e83633bd0a7f8d3e6a5d830f48236427ad", version = "0.1.0", optional = true }
-tpt-anima-sse = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "408c2e0065ba99e619fa7277d3801e0c9abad0ff", version = "0.1.0", optional = true }
-tpt-anima-inp = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "408c2e0065ba99e619fa7277d3801e0c9abad0ff", version = "0.1.0", optional = true }
-tpt-anima-ck = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "408c2e0065ba99e619fa7277d3801e0c9abad0ff", version = "0.1.0", optional = true }
+tpt-eve-core = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "db6e8df72344dc820bcf5fac5b9aaff8e438ef48", version = "0.1.0", optional = true }
+tpt-eve-metacognition = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "db6e8df72344dc820bcf5fac5b9aaff8e438ef48", version = "0.1.0", optional = true }
+tpt-eve-causal = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "db6e8df72344dc820bcf5fac5b9aaff8e438ef48", version = "0.1.0", optional = true }
+tpt-eve-abstraction = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "db6e8df72344dc820bcf5fac5b9aaff8e438ef48", version = "0.1.0", optional = true }
+tpt-eve-active-learning = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "db6e8df72344dc820bcf5fac5b9aaff8e438ef48", version = "0.1.0", optional = true }
+tpt-eve-symbolic = { git = "https://github.com/TPT-Solutions/tpt-eve", rev = "db6e8df72344dc820bcf5fac5b9aaff8e438ef48", version = "0.1.0", optional = true }
+tpt-anima-sse = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "5e9da51b4e13b79204bcfeeabaf915cb224d7bdf", version = "0.1.0", optional = true }
+tpt-anima-inp = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "5e9da51b4e13b79204bcfeeabaf915cb224d7bdf", version = "0.1.0", optional = true }
+tpt-anima-ck = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "5e9da51b4e13b79204bcfeeabaf915cb224d7bdf", version = "0.1.0", optional = true }
 tpt-augur-frontend = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "c29ecd1781f9f2b8d04b971329340c44349fcbfb", version = "0.1.0", optional = true }
 tpt-augur-ir = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "c29ecd1781f9f2b8d04b971329340c44349fcbfb", version = "0.1.0", optional = true }
 tpt-augur-runtime = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "c29ecd1781f9f2b8d04b971329340c44349fcbfb", version = "0.1.0", optional = true }
 tpt-axiom-core = { git = "https://github.com/tpt-solutions/tpt-axiom", rev = "42c495f7751db5acc3c571bb890da41a153f75ba", version = "0.1.0", optional = true }
+tpt-axiom-ir = { git = "https://github.com/tpt-solutions/tpt-axiom", rev = "42c495f7751db5acc3c571bb890da41a153f75ba", version = "0.1.0", optional = true }
+tpt-axiom-verify = { git = "https://github.com/tpt-solutions/tpt-axiom", rev = "42c495f7751db5acc3c571bb890da41a153f75ba", version = "0.1.0", optional = true }
 tpt-intellect-remote = { git = "https://github.com/TPT-Solutions/tpt-intellect", rev = "a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc", version = "0.1.0", features = ["serde"], optional = true }
 # tpt-infer has no revision pin in tpt-intellect-remote's manifest, so this uses the same
 # unpinned source; Cargo.lock holds the commit both resolve to, so only one copy is built.
+tpt-anima-zkpa = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "5e9da51b4e13b79204bcfeeabaf915cb224d7bdf", version = "0.1.0", default-features = false, optional = true }
 tpt-infer = { git = "https://github.com/tpt-solutions/tpt-infer.git", version = "0.1.0", default-features = false, features = ["ops-cpu", "runtime"], optional = true }
+tpt-pulse-core = { git = "https://github.com/tpt-solutions/tpt-pulse", rev = "f36c1f0e3aff4a60e7ea0e99dd58e88859fc8acf", version = "0.1.0", optional = true }
+tpt-thought-observatory = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

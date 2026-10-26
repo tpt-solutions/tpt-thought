@@ -9,12 +9,14 @@
 //! | Feature | Sibling (pinned revision) | Adapter | Thought port |
 //! |---|---|---|---|
 //! | `intellect` | `tpt-intellect` `a502c013` | `intellect::IntellectProvider` | `IntelligenceProvider` |
-//! | `eve` | `tpt-eve` `c230d0e8` | `eve::EveAdapter` | `DeliberationEngine` |
-//! | `anima` | `tpt-anima` `408c2e00` | `anima::AnimaMemory`, `anima::AnimaBudget`, `anima::AnimaBroadcast` | `MemoryStore`, budget signal, intention broadcast, `SleepScheduler` (throttle factor above 0.75 and flops remaining) |
+//! | `eve` | `tpt-eve` `db6e8df7` | `eve::EveAdapter` | `DeliberationEngine` |
+//! | `anima` | `tpt-anima` `5e9da51b` | `anima::AnimaMemory`, `anima::AnimaBudget`, `anima::AnimaBroadcast` | `MemoryStore` (tag and similarity recall), budget signal, resource snapshot, intention negotiation, `SleepScheduler` (throttle factor above 0.75 and flops remaining) |
 //! | `augur` | `tpt-augur` `c29ecd17` | `augur::AugurAdapter`, `augur::AugurSession` | posterior records with residual uncertainty, possible states for discrete parameters, and evidence updates |
-//! | `axiom` | `tpt-axiom` `42c495f7` | `axiom::probability`, `axiom::confidence`, `axiom::uncertainty` | `Probability`, `Confidence`, `Uncertainty` (fuzzy variance as epistemic) |
+//! | `axiom` | `tpt-axiom` `42c495f7` | `axiom::probability`, `axiom::confidence`, `axiom::uncertainty`, `axiom::verify_comparison` | `Probability`, `Confidence`, `Uncertainty` (fuzzy variance as epistemic), `EpistemicStatus::Verified` for checked constraints |
 //! | `remote` | `tpt-intellect` `a502c013` (`tpt-intellect-remote`, serde) | `remote::loopback`, `remote::over_transport` | `IntelligenceProvider` |
 //! | `local` | `remote` + `tpt-infer` (unpinned in its own manifest; `Cargo.lock` pins it) | `local::LocalClassifier` | `IntelligenceProvider` |
+//! | `pulse` | `tpt-pulse` event stream (`tpt-pulse-core` `f36c1f0`) | `pulse::PulseSink` | `TelemetrySink` (observatory events on a broadcast stream) |
+//! | `zkpa` | `tpt-anima` `5e9da51b` (`tpt-anima-zkpa`, `default-features = false`) | `zkpa::AnimaIdentity` | task-scoped sessions and permission delegation (§40) |
 //!
 //! `remote` wraps the sibling's `RemoteBackend` in the same `IntellectProvider` as local
 //! Intellect backends, so the Thought port is unchanged. Only the sibling's loopback
@@ -28,14 +30,12 @@
 //!
 //! # Not implemented (blocked)
 //!
-//! - **Pulse** (Phase 10 `PulseAdapter`): `tpt-pulse` has no event stream. Only synchronous
-//!   session-typed channels exist, and the signal and backend crates are scaffolds.
-//! - **Anima gaps**: `tpt-anima` has no `retrieve_context`, no episode persistence, no global
-//!   workspace and no ZKPA identity type. Those items are not invented here.
+//! - **Anima gaps**: `tpt-anima` has no global workspace. ZKPA attestation, proofs and the agency
+//!   ledger are not mapped. `retrieve_context` is not provided; `anima::AnimaMemory::recall_similar` covers
+//!   its role. Those items are not invented here.
 //! - **Eve gaps**: `tpt-eve` has no deliberation entry point. `tpt-eve-neural` pulls in tokio, so
-//!   it is not used. Contradiction analysis reports `Unsupported`: `tpt-eve-symbolic` depends on
-//!   `dirs`, which pulls in `option-ext` (MPL-2.0), outside the permissive licence policy. Query
-//!   ranking reports `Unsupported` too. Interventions and counterfactuals map to `tpt-eve-causal`.
+//!   it is not used. Query ranking reports `Unsupported`. Interventions and counterfactuals map to
+//!   `tpt-eve-causal`, and contradiction analysis maps to `tpt-eve-symbolic`.
 //! - **Augur**: the pinned revision provides evidence sessions and residual uncertainty, so
 //!   `AugurSession` builds with the `augur` feature.
 
@@ -51,5 +51,9 @@ pub mod eve;
 pub mod intellect;
 #[cfg(feature = "local")]
 pub mod local;
+#[cfg(feature = "pulse")]
+pub mod pulse;
 #[cfg(feature = "remote")]
 pub mod remote;
+#[cfg(feature = "zkpa")]
+pub mod zkpa;

@@ -1,9 +1,9 @@
 # Integration: Eve
 
 **Status: implemented in part** in `tpt-thought-integrations`, behind the `eve` feature. The
-sibling is `tpt-eve`, pinned at `c230d0e83633bd0a7f8d3e6a5d830f48236427ad`. The adapter uses the
-`tpt-eve-core`, `tpt-eve-metacognition`, `tpt-eve-causal`, `tpt-eve-abstraction` and
-`tpt-eve-active-learning` crates, all 0.1.0.
+sibling is `tpt-eve`, pinned at `db6e8df72344dc820bcf5fac5b9aaff8e438ef48`. The adapter uses the
+`tpt-eve-core`, `tpt-eve-metacognition`, `tpt-eve-causal`, `tpt-eve-abstraction`,
+`tpt-eve-active-learning` and `tpt-eve-symbolic` crates, all 0.1.0.
 
 ## Mapping
 
@@ -20,15 +20,12 @@ Facts, observations and causal relations are supplied through `assert_fact`, `ob
 | `analyse_causation` (intervention) | `CausalReasoningEngine::predict_intervention` | implemented; the intervention is `variable=value`, and the baseline is the root variables of the most recent observation |
 | `analyse_causation` (counterfactual) | `CausalReasoningEngine::simulate_counterfactual` | implemented; the baseline is the most recent observation, and the effect is read from the counterfactual world |
 | `validate_abstraction` | `AbstractionEngine::mine_principles` | implemented; principles with partial support are reported as `Conditional`; analogy targets are noted but not validated |
-| `analyse_contradictions` | `tpt-eve-symbolic` | unsupported; see Blocked |
+| `analyse_contradictions` | `tpt-eve-symbolic` `ConsistencyChecker` | implemented; each claim must be `subject predicate object`, with the object as the rest of the statement. Only `is` and `was` are exclusive, so only they conflict, and identical repeats do not |
 | `rank_queries` | none in `tpt-eve` | unsupported |
 | `reason`, `investigate` | none; `tpt-eve` has no deliberation entry point | unsupported |
 
 ## Blocked
 
-- **Contradiction analysis.** `tpt-eve-symbolic` is free of tokio, but it depends on `dirs`, which
-  pulls in `option-ext`. That crate is MPL-2.0, which the licence policy in `deny.toml` does not
-  allow. The adapter reports `Unsupported` until Eve drops or replaces that dependency.
 - `tpt-eve-neural` depends on tokio and async-trait, so it is excluded.
 - `tpt-eve` has no deliberation entry point, so `reason` and `investigate` have no Eve source.
 
@@ -41,7 +38,11 @@ The tests drive the real Eve layers:
 - an intervention that changes the predicted effect, a counterfactual, and rejected inputs;
 - experiment design from a generated hypothesis, and rejection of unknown hypotheses;
 - regeneration that does not duplicate hypotheses, and rejection of a cost cap;
-- contradiction analysis reporting `Unsupported`.
+- contradiction analysis: a conflict between two `is` claims, no conflict for identical repeats or
+  for non-exclusive predicates, and a malformed claim refused rather than skipped.
+
+`tpt-eve-symbolic` used to depend on `dirs`, which pulled in `option-ext` (MPL-2.0). `tpt-eve`
+commit `db6e8df` removes that dependency, so the licence policy is met.
 
 The acceptance test for criterion F runs the real Eve adapter through the loop. Eve does not
 implement `investigate`, so the test checks that the slow path skips Eve. It does not show Eve

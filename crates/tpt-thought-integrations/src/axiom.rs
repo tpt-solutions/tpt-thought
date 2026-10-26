@@ -7,12 +7,20 @@
 //! uncertainty in the estimate of the mean, so it is recorded as epistemic uncertainty. Axiom
 //! records no calibration provenance, so its confidence is treated as raw (§67).
 //!
-//! Axiom's ZK proof types are not mapped. Verification markers belong to a separate
-//! verification layer, and this adapter does not claim proofs it has not checked.
+//! Values Axiom produces from probabilistic inference are `EpistemicStatus::Probabilistic`.
+//! A constraint from an Axiom circuit earns `EpistemicStatus::Verified` only when
+//! `tpt-axiom-verify` checks that it encodes the claimed comparison (see [`verify_comparison`]).
+//!
+//! Axiom's ZK proof types are not mapped, so nothing here yields `EpistemicStatus::Proven`.
+//! Proof verification belongs to a separate verification layer, and this adapter does not claim
+//! proofs it has not checked.
 
 use tpt_axiom_core::{Confidence as AxiomConfidence, Fuzzy, Probability as AxiomProbability};
+use tpt_axiom_ir::circuit::ExprId;
+use tpt_axiom_ir::ConstraintSystem;
+use tpt_axiom_verify::{check_comparison, normalize_all, Comparison, Mismatch};
 use tpt_thought_core::confidence::InvalidProbability;
-use tpt_thought_core::{Confidence, Probability, Uncertainty};
+use tpt_thought_core::{Confidence, EpistemicStatus, Probability, Uncertainty};
 
 /// A Thought probability with the same value as an Axiom probability.
 pub fn probability(p: AxiomProbability) -> Result<Probability, InvalidProbability> {
@@ -34,9 +42,51 @@ pub fn uncertainty(fuzzy: &Fuzzy<f64>) -> Uncertainty {
     }
 }
 
+/// Why a constraint could not be verified as a comparison.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ConstraintError {
+    /// The system has no constraint at this index.
+    MissingConstraint(usize),
+    /// One of the compared expressions is not in the system's expression table.
+    MissingExpr(ExprId),
+    /// The constraint does not encode the claimed comparison.
+    Mismatch(Mismatch),
+}
+
+/// Checks that constraint `constraint` of `system` encodes `lhs <cmp> rhs`.
+///
+/// Returns `EpistemicStatus::Verified` when the check passes. A failing check is an error, not an
+/// informal status, so the caller sees the polynomials that disagree.
+///
+/// # Errors
+///
+/// [`ConstraintError`] when the constraint or an expression is missing, or when the constraint
+/// does not encode the claimed comparison.
+pub fn verify_comparison(
+    system: &ConstraintSystem,
+    constraint: usize,
+    cmp: Comparison,
+    lhs: ExprId,
+    rhs: ExprId,
+) -> Result<EpistemicStatus, ConstraintError> {
+    let found = *system
+        .constraints
+        .get(constraint)
+        .ok_or(ConstraintError::MissingConstraint(constraint))?;
+    for expr in [lhs, rhs] {
+        if expr >= system.exprs.len() {
+            return Err(ConstraintError::MissingExpr(expr));
+        }
+    }
+    let table = normalize_all(system);
+    check_comparison(&table, &found, cmp, lhs, rhs).map_err(ConstraintError::Mismatch)?;
+    Ok(EpistemicStatus::Verified)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tpt_axiom_ir::ConstraintSystemBuilder;
 
     #[test]
     fn probabilities_keep_their_value() {
@@ -69,5 +119,43 @@ mod tests {
         let fuzzy = Fuzzy::from_std_dev(10.0_f64, 2.0_f64);
         let (low, high) = fuzzy.confidence_interval(0.95);
         assert!(low < 10.0 && 10.0 < high);
+    }
+
+    /// Builds `x >= y` as the non-negativity constraint `x - y >= 0`.
+    fn at_least() -> (ConstraintSystem, ExprId, ExprId) {
+        let mut builder = ConstraintSystemBuilder::new("at_least");
+        let x = builder.secret_input("x");
+        let y = builder.secret_input("y");
+        let diff = builder.sub(x, y);
+        builder.constrain_non_negative(diff);
+        (builder.build(), x, y)
+    }
+
+    #[test]
+    fn a_constraint_that_encodes_the_claim_is_verified() {
+        let (system, x, y) = at_least();
+        let status = verify_comparison(&system, 0, Comparison::Ge, x, y);
+        assert_eq!(status, Ok(EpistemicStatus::Verified));
+    }
+
+    #[test]
+    fn a_constraint_that_encodes_a_different_claim_is_a_mismatch() {
+        let (system, x, y) = at_least();
+        let status = verify_comparison(&system, 0, Comparison::Gt, x, y);
+        assert!(matches!(status, Err(ConstraintError::Mismatch(_))));
+    }
+
+    #[test]
+    fn a_missing_constraint_is_reported() {
+        let (system, x, y) = at_least();
+        let status = verify_comparison(&system, 1, Comparison::Ge, x, y);
+        assert_eq!(status, Err(ConstraintError::MissingConstraint(1)));
+    }
+
+    #[test]
+    fn a_missing_expression_is_reported() {
+        let (system, x, _) = at_least();
+        let status = verify_comparison(&system, 0, Comparison::Ge, x, 999);
+        assert_eq!(status, Err(ConstraintError::MissingExpr(999)));
     }
 }

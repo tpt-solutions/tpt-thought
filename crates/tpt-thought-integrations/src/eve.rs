@@ -5,7 +5,7 @@
 //! The adapter owns the Eve layers it uses and feeds them the facts, observations and causal
 //! relations that Thought supplies. Eve has no single deliberation entry point, so each Thought
 //! capability maps onto one layer. Capabilities with no Eve counterpart keep the trait's
-//! `Unsupported` default: reasoning, investigation, contradiction analysis and query ranking.
+//! `Unsupported` default: reasoning, investigation and query ranking.
 
 use std::collections::{HashMap, HashSet};
 
@@ -14,13 +14,15 @@ use tpt_eve_active_learning::{ActiveLearningEngine, Hypothesis as EveHypothesis}
 use tpt_eve_causal::CausalReasoningEngine;
 use tpt_eve_core::{CausalRelationDraft, CausalRelationKind, Fact, Value};
 use tpt_eve_metacognition::MetaCognitionEngine;
+use tpt_eve_symbolic::ConsistencyChecker;
 use tpt_thought_core::{
     Confidence, Hypothesis, HypothesisId, IdGenerator, Probability, SeededEntropy,
 };
 use tpt_thought_deliberation::{
     AbstractionRequest, AbstractionVerdict, Capability, CausalAnalysis, CausalQuery, CausalRequest,
-    DeliberationContext, DeliberationEngine, DeliberationError, ExperimentPlan, ExperimentRequest,
-    HypothesisRequest, Metacognition, NextAction, Validity,
+    Claim, Conflict, ContradictionAnalysis, ContradictionRequest, DeliberationContext,
+    DeliberationEngine, DeliberationError, ExperimentPlan, ExperimentRequest, HypothesisRequest,
+    Metacognition, NextAction, Resolution, Validity,
 };
 
 /// Knowledge gaps are reported for facts below this confidence.
@@ -270,6 +272,55 @@ impl DeliberationEngine for EveAdapter {
         })
     }
 
+    fn analyse_contradictions(
+        &mut self,
+        _ctx: &DeliberationContext,
+        request: &ContradictionRequest,
+    ) -> Result<ContradictionAnalysis, DeliberationError> {
+        let claims = request
+            .claims
+            .iter()
+            .map(parse_claim)
+            .collect::<Result<Vec<_>, _>>()?;
+        let facts: Vec<Fact> = claims
+            .iter()
+            .map(|claim| {
+                Fact::asserted(
+                    Value::Symbol(claim.subject.clone()),
+                    Value::Symbol(claim.predicate.clone()),
+                    Value::Text(claim.object.clone()),
+                )
+            })
+            .collect();
+        // Eve reports a key with several facts, so identical repeats are filtered out below.
+        let mut conflicts = Vec::new();
+        for contradiction in ConsistencyChecker::new().check(&facts) {
+            let subject = contradiction.subject.as_str();
+            let predicate = contradiction.predicate.as_str();
+            let group: Vec<&ParsedClaim> = claims
+                .iter()
+                .filter(|claim| claim.subject == subject && claim.predicate == predicate)
+                .collect();
+            for (i, left) in group.iter().enumerate() {
+                for right in &group[i + 1..] {
+                    if left.object != right.object {
+                        conflicts.push(Conflict {
+                            left: left.label.clone(),
+                            right: right.label.clone(),
+                            explanation: format!(
+                                "{subject} {predicate} both \"{}\" and \"{}\"",
+                                left.object, right.object
+                            ),
+                            resolution: Resolution::NewEvidence,
+                        });
+                    }
+                }
+            }
+        }
+        conflicts.sort_by(|a, b| (&a.left, &a.right).cmp(&(&b.left, &b.right)));
+        Ok(ContradictionAnalysis { conflicts })
+    }
+
     fn design_experiment(
         &mut self,
         _ctx: &DeliberationContext,
@@ -335,6 +386,38 @@ fn parse_assignments(text: &str) -> Result<Vec<(String, f64)>, DeliberationError
             Ok((name.trim().to_string(), value))
         })
         .collect()
+}
+
+/// A claim split into the `subject predicate object` form Eve's facts use. The subject and
+/// predicate are the first two words, and the object is the rest of the statement.
+struct ParsedClaim {
+    label: String,
+    subject: String,
+    predicate: String,
+    object: String,
+}
+
+fn parse_claim(claim: &Claim) -> Result<ParsedClaim, DeliberationError> {
+    let malformed = || {
+        DeliberationError::Failed(format!(
+            "claim '{}' is not in `subject predicate object` form",
+            claim.label
+        ))
+    };
+    let mut words = claim.statement.split_whitespace();
+    let (Some(subject), Some(predicate)) = (words.next(), words.next()) else {
+        return Err(malformed());
+    };
+    let object = words.collect::<Vec<_>>().join(" ");
+    if object.is_empty() {
+        return Err(malformed());
+    }
+    Ok(ParsedClaim {
+        label: claim.label.clone(),
+        subject: subject.to_string(),
+        predicate: predicate.to_string(),
+        object,
+    })
 }
 
 /// Eve's intervention confidence is a rough score in `0..=1`; anything outside that is unknown.
@@ -593,15 +676,65 @@ mod tests {
         assert!(eve.design_experiment(&context(), &request).is_err());
     }
 
+    fn claim(label: &str, statement: &str) -> Claim {
+        Claim {
+            label: label.into(),
+            statement: statement.into(),
+        }
+    }
+
     #[test]
-    fn contradiction_analysis_stays_unsupported() {
+    fn exclusive_predicates_with_different_objects_conflict() {
         let mut eve = EveAdapter::new(5);
-        let request = ContradictionRequest { claims: Vec::new() };
+        let request = ContradictionRequest {
+            claims: vec![
+                claim("a", "TypeScript is a programming language"),
+                claim("b", "TypeScript is a database"),
+                claim("c", "Rust is a programming language"),
+            ],
+        };
+        let analysis = eve.analyse_contradictions(&context(), &request).unwrap();
+        assert_eq!(analysis.conflicts.len(), 1);
+        let conflict = &analysis.conflicts[0];
         assert_eq!(
-            eve.analyse_contradictions(&context(), &request),
-            Err(DeliberationError::Unsupported(
-                Capability::ContradictionAnalysis
-            ))
+            (conflict.left.as_str(), conflict.right.as_str()),
+            ("a", "b")
         );
+        assert_eq!(conflict.resolution, Resolution::NewEvidence);
+    }
+
+    #[test]
+    fn repeated_identical_claims_do_not_conflict() {
+        let mut eve = EveAdapter::new(5);
+        let request = ContradictionRequest {
+            claims: vec![
+                claim("a", "Rust is memory safe"),
+                claim("b", "Rust is memory safe"),
+            ],
+        };
+        let analysis = eve.analyse_contradictions(&context(), &request).unwrap();
+        assert!(analysis.conflicts.is_empty());
+    }
+
+    #[test]
+    fn non_exclusive_predicates_do_not_conflict() {
+        let mut eve = EveAdapter::new(5);
+        let request = ContradictionRequest {
+            claims: vec![claim("a", "cat has tail"), claim("b", "cat has fur")],
+        };
+        let analysis = eve.analyse_contradictions(&context(), &request).unwrap();
+        assert!(analysis.conflicts.is_empty());
+    }
+
+    #[test]
+    fn malformed_claims_are_refused_rather_than_skipped() {
+        let mut eve = EveAdapter::new(5);
+        let request = ContradictionRequest {
+            claims: vec![claim("a", "Rust is"), claim("b", "Rust is fast")],
+        };
+        assert!(matches!(
+            eve.analyse_contradictions(&context(), &request),
+            Err(DeliberationError::Failed(_))
+        ));
     }
 }

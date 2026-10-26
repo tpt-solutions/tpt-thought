@@ -130,7 +130,7 @@ Ground rules (apply to every phase)
 - [x] `EveAdapter` implementing `DeliberationEngine` without depending on Eve internal crates where avoidable
 - [x] Metacognition consumption: certainty, gaps, assumptions, missing evidence, should-continue/act/ask-for-help (§19)
 - [x] Hypothesis generation via Eve
-- [ ] Contradiction analysis via Eve symbolic/causal reasoning
+- [x] Contradiction analysis via Eve symbolic (`ConsistencyChecker`; `is`/`was` conflicts, claims in `subject predicate object` form)
 - [x] Causal reasoning (interventions, counterfactuals, effect estimation)
 - [x] Abstraction and analogy validation (§77)
 - [x] Active learning and experiment design
@@ -141,14 +141,14 @@ Ground rules (apply to every phase)
 
 ## Phase 6 — Anima Integration
 - [x] Review Anima crates (sse, inp, zkpa, ck)
-- [ ] `AnimaAdapter`: memory retrieval via SSE (`retrieve_context`)
+- [x] `AnimaAdapter`: memory retrieval via SSE. `retrieve_context` does not exist in `tpt-anima`; `AnimaMemory::recall_similar` covers it through `semantic_search`
 - [ ] Persist consolidated results to SSE without duplicating storage
 - [x] Episodic memory records: Episode, EpisodeEvent, EpisodeOutcome, PredictionRecord, ActionRecord (§14, §48.2)
-- [ ] Propose or contribute SSE extension for episodes (Anima repo change)
+- [x] Propose or contribute SSE extension for episodes (Anima repo change; `tpt-anima-sse` `EpisodeStore`, commit `5e9da51`)
 - [x] Global workspace: publish, attend, subscribe, broadcast, request, withdraw (§12)
-- [x] Decide: `tpt-anima-workspace` crate vs inside CK/SSE (§48.1)
-- [ ] INP integration: intention negotiation and execution (§23, §24)
-- [ ] ZKPA integration: identity, permissions, attestation, ownership states (§40)
+- [x] Decide: `tpt-anima-workspace` crate vs inside CK/SSE (§48.1). Decision: no Anima workspace. The cognitive workspace stays in Thought (`GlobalWorkspace`), and cross-agent transport uses INP. Revisit at Phase 10 if multi-agent sharing needs shared persistent state.
+- [x] INP integration: intention negotiation and execution (§23, §24). `AnimaBroadcast::open_intention` runs the bid round through `NegotiationSession` and records the provider's outcome in `AnimaIntention`. Fallback strategies are not used
+- [ ] ZKPA integration: identity, permissions, attestation, ownership states (§40). Sessions and delegation are done (`zkpa::AnimaIdentity`); attestation, proofs and ownership are not
 - [ ] CK integration: send cognitive requirements, receive scheduling decisions (§35)
 - [ ] Homeostatic state consumption: compute budget, memory/latency pressure, energy, urgency, risk, uncertainty (§48.3, §81)
 - [x] Cognitive circuit breakers: repetition loops, thought/hypothesis explosion, recursive escalation, confidence oscillation, contradiction loops, resource exhaustion (§48.4)
@@ -191,7 +191,7 @@ Ground rules (apply to every phase)
 - [x] System lifecycle: ACTIVE, IDLE, REFLECTION, SLEEP, CONSOLIDATION, AWAKE
 - [x] Interruptible sleep (high-priority event wakes the system)
 - [x] `SleepCycle`, `ConsolidationPlan`, `ThoughtReplay`, `MemoryReorganisation`
-- [ ] Anima CK schedules sleep when resources permit (trait defined; Anima implementation blocked)
+- [x] Anima CK schedules sleep when resources permit (`AnimaBudget` implements `SleepScheduler` over CK's thermal and flops state)
 - [x] Episode replay, prioritised by importance
 - [x] Pattern detection and repeated-mistake identification
 - [x] Merge redundant memories
@@ -221,8 +221,8 @@ Ground rules (apply to every phase)
 - [x] Remote provider via `tpt-intellect-remote` only (no HTTP in Thought, §93)
 - [ ] Local provider support via Intellect (tpt-infer, tpt-spark, Ollama) without knowing internals (§94)
 - [x] `AugurAdapter`: states, posteriors, evidence updates, residual uncertainty (§49). Discrete states come from the posterior draws (`augur::states_of`); evidence updates and residuals are in `AugurSession`.
-- [ ] `AxiomAdapter`: uncertainty types, validated values, formal constraints, verification markers (§50)
-- [ ] `PulseAdapter`: cognitive event stream (§53, §116)
+- [x] `AxiomAdapter`: uncertainty types, validated values, formal constraints, verification markers (§50). `Proven` needs ZK proof verification and is not mapped (see blocked notes)
+- [x] `PulseAdapter`: cognitive event stream (§53, §116). `tpt-pulse-core` gained `EventStream`, a broadcast stream, and `pulse::PulseSink` publishes observatory events to it. Pinned to `tpt-pulse` `f36c1f0`.
 - [ ] Multi-agent thought sharing: broadcast, independent evaluation, ensemble merge via INP (§39)
 - [x] Backend evolution test: add a new backend without modifying cognitive model (§90)
 - [x] Verify acceptance criterion M: same architecture with multiple providers
@@ -350,13 +350,12 @@ Models · databases · LLM clients · tensor ops · probability maths · formal 
 ---
 
 ## Blocked and partial (open items)
-- **Axiom adapter (partial)**: built behind the `axiom` feature, pinned to `tpt-axiom` `42c495f7`. Covers validated probabilities, confidence and fuzzy variance. Formal constraints and ZK verification markers are not mapped.
+- **Axiom adapter (partial)**: built behind the `axiom` feature, pinned to `tpt-axiom` `42c495f7`. Covers validated probabilities, confidence, fuzzy variance, and `Verified` status for constraints checked by `tpt-axiom-verify`. ZK proof envelopes are not verified, so nothing yields `Proven`. Axiom's `decision_types` (`Calibration`, `Decision`) are not adapted.
 - **Remote and local providers**: remote (loopback and caller-supplied transports) and local (`tpt-infer` classifier) are built. The `tpt-infer` pin relies on `Cargo.lock`: cargo rejects a workspace patch pointing at the same source, and the sibling manifest names no revision. Ollama and `tpt-spark` are not in the sibling survey and are not built.
-- **Eve contradiction analysis**: `tpt-eve-symbolic` is tokio-free, but its `dirs` dependency pulls in `option-ext` (MPL-2.0), which fails the licence policy. Blocked until Eve drops or replaces that dependency.
 - **Eve query ranking**: no tokio-free API found.
 - **Golden scenario against real siblings**: written, but two properties are ignored. The real Intellect answers at full confidence on the first pass, so the Eve, Augur and re-evaluation stages never run. The Eve adapter has no investigation step to report.
-- **Pulse**: no event stream exists in `tpt-pulse`, only synchronous session-typed channels.
-- **Anima**: no `retrieve_context`, episode persistence, global workspace or ZKPA identity type. The broadcast adapter covers provider discovery only.
+- **Anima**: no `retrieve_context` (covered by `recall_similar`) and no global workspace. Intention execution is tracked by `AnimaIntention`, with no fallbacks. The ZKPA adapter covers sessions and delegation. Attestation, proofs and the agency ledger are not mapped.
+
 - **Observatory UI**: belongs to Anima Observatory, out of scope for Thought.
 - **Release tag `v0.1.0`**: exists locally (commit `220fc9b`); the later commits are not covered by it.
 - **Consolidator input (Phase 13)**: the loop owns a consolidator and exposes `sleep()`, but nothing feeds it episodes, beliefs or calibration samples automatically. Callers record them with `consolidator_mut()`.

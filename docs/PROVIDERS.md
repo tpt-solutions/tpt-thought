@@ -75,4 +75,4 @@ each behind its own feature:
 - Anima, Augur and Axiom (`anima`, `augur`, `axiom`): memory, budget, posterior and uncertainty
   adapters. See `INTEGRATION_ANIMA.md`, `INTEGRATION_AUGUR.md` and `INTEGRATION_AXIOM.md`.
 
-Ollama and `tpt-spark` adapters are not built. Pulse has no event stream to adapt.
+Ollama and `tpt-spark` adapters are not built.
