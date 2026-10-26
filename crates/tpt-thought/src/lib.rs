@@ -32,3 +32,29 @@ pub use tpt_thought_reflection as reflection;
 pub use tpt_thought_safety as safety;
 pub use tpt_thought_state as state;
 pub use tpt_thought_workspace as workspace;
+
+/// Sibling-repo adapters. Enable the matching feature (`intellect`, `eve`, `anima`, `augur`,
+/// `axiom`, `remote` or `local`) to build them; without one, this module is absent.
+#[cfg(any(
+    feature = "intellect",
+    feature = "eve",
+    feature = "anima",
+    feature = "augur",
+    feature = "axiom",
+    feature = "remote",
+    feature = "local"
+))]
+pub use tpt_thought_integrations as integrations;
+
+/// The types most programs need, in one import: `use tpt_thought::prelude::*;`.
+pub mod prelude {
+    pub use crate::cognitive_loop::{
+        Action, ActionError, ActionSink, CognitiveLoop, CycleOutcome, Estimate, Estimator, Input,
+        LoopBuilder, LoopConfig, LoopError, Modulation, NullActionSink, NullEngine, NullEstimator,
+    };
+    pub use crate::core::{
+        Clock, IdGenerator, ManualClock, SeededEntropy, TextContent, Thought, ThoughtContent,
+        ThoughtId, ThoughtOrigin, ThoughtState, Timestamp,
+    };
+    pub use crate::providers::ProviderRegistry;
+}

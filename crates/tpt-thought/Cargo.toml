@@ -1,15 +1,28 @@
 [package]
 name = "tpt-thought"
 description = "TPT Thought: cognitive process and thought representation (facade crate)"
+keywords = ["cognition", "thought", "cognitive-model", "agents", "reasoning"]
+categories = ["science", "rust-patterns"]
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
+
+[features]
+# Each feature turns on the matching sibling-repo adapter in `tpt-thought-integrations`.
+intellect = ["tpt-thought-integrations/intellect"]
+eve = ["tpt-thought-integrations/eve"]
+anima = ["tpt-thought-integrations/anima"]
+augur = ["tpt-thought-integrations/augur"]
+axiom = ["tpt-thought-integrations/axiom"]
+remote = ["tpt-thought-integrations/remote"]
+local = ["tpt-thought-integrations/local"]
 
 [dependencies]
+tpt-thought-integrations = { path = "../tpt-thought-integrations", version = "0.1.0", optional = true }
 tpt-thought-core = { workspace = true }
 tpt-thought-state = { workspace = true }
 tpt-thought-provenance = { workspace = true }
@@ -30,3 +43,7 @@ tpt-thought-hypothesis = { workspace = true }
 
 [lints]
 workspace = true
+
+[[example]]
+name = "augur_evidence"
+required-features = ["augur"]
