@@ -11,6 +11,7 @@ use crate::config::LoopConfig;
 use crate::curiosity::{CuriosityDriver, CuriosityEvent};
 use crate::mode::CognitiveMode;
 use crate::plan::{CandidatePlan, Plan, PlanError};
+use crate::resources::{Admission, CognitiveRequirement, ResourceGate, Unmetered};
 use crate::slow::{Estimator, SlowStage};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -138,6 +139,12 @@ pub enum CycleOutcome {
     /// The cycle stopped without acting.
     Unresolved {
         /// Why.
+        reason: String,
+    },
+    /// The resource gate refused the cycle, so no provider was asked and nothing ran. The thought
+    /// is left uncertain and the cycle may be run again once resources allow it.
+    Deferred {
+        /// The gate's reason for refusing.
         reason: String,
     },
 }
@@ -427,10 +434,31 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
         &self.sink
     }
 
-    /// Run one full cycle for `input`.
+    /// Run one full cycle for `input`, with no resource budget. Equivalent to
+    /// [`CognitiveLoop::run_gated`] with an empty requirement and [`Unmetered`].
     pub fn run(&mut self, input: &Input) -> Result<CycleReport, LoopError> {
+        self.run_gated(input, &CognitiveRequirement::default(), &mut Unmetered)
+    }
+
+    /// Run one full cycle for `input`, asking `gate` to admit `requirement` before any provider
+    /// is asked (spec sections 35 and 48.3).
+    ///
+    /// The mode is selected from the modulatory state under the gate's current resource snapshot,
+    /// so strain shifts it toward cheaper cognition (see `Modulation::under_pressure`). A denied
+    /// requirement returns [`CycleOutcome::Deferred`] with the gate's reason, and nothing runs. An
+    /// admitted requirement is released when the cycle ends, however it ends.
+    pub fn run_gated(
+        &mut self,
+        input: &Input,
+        requirement: &CognitiveRequirement,
+        gate: &mut dyn ResourceGate,
+    ) -> Result<CycleReport, LoopError> {
         let at = input.at;
-        let mode = self.config.modulation.select_mode();
+        let mode = self
+            .config
+            .modulation
+            .under_pressure(&gate.snapshot())
+            .select_mode();
 
         // Observe: the input becomes a thought and is received.
         let observation = Observation {
@@ -530,6 +558,29 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
             TransitionKind::Deterministic,
             "evaluated".into(),
         );
+
+        // Admission: the gate decides whether this cycle may spend the compute it needs. A denied
+        // cycle asks no provider and runs no action, and its reason is reported to the caller.
+        if let Admission::Denied { reason } = gate.admit(requirement) {
+            apply(&mut thought, ThoughtEvent::MarkUncertain, at)?;
+            self.record(
+                &thought,
+                CyclePhase::Decide,
+                mode,
+                TransitionKind::Probabilistic,
+                format!("deferred: {reason}"),
+            );
+            return Ok(stopped(
+                &thought,
+                mode,
+                &memories,
+                CycleOutcome::Deferred { reason },
+            ));
+        }
+        let _lease = Lease {
+            gate,
+            requirement: requirement.clone(),
+        };
 
         // Decide: ask providers in the mode selected from the modulatory state.
         let mut request = IntelligenceRequest::new(input.question.clone(), at);
@@ -1013,10 +1064,20 @@ fn unresolved(
     memories: &[MemoryRef],
     reason: String,
 ) -> CycleReport {
+    stopped(thought, mode, memories, CycleOutcome::Unresolved { reason })
+}
+
+/// The report for a cycle that stopped before any slow stage ran, with the given outcome.
+fn stopped(
+    thought: &Thought,
+    mode: CognitiveMode,
+    memories: &[MemoryRef],
+    outcome: CycleOutcome,
+) -> CycleReport {
     CycleReport {
         thought: thought.id,
         mode,
-        outcome: CycleOutcome::Unresolved { reason },
+        outcome,
         slow_stages: Vec::new(),
         investigation: None,
         curiosity: None,
@@ -1029,6 +1090,19 @@ fn unresolved(
 
 fn halted(trip: Trip) -> LoopError {
     LoopError::Halted(format!("{trip:?}"))
+}
+
+/// An admitted requirement, held for the rest of a cycle. Dropping it releases the requirement, so
+/// the compute returns to the gate on every exit path, including errors.
+struct Lease<'a> {
+    gate: &'a mut dyn ResourceGate,
+    requirement: CognitiveRequirement,
+}
+
+impl Drop for Lease<'_> {
+    fn drop(&mut self) {
+        self.gate.release(&self.requirement);
+    }
 }
 
 #[cfg(test)]

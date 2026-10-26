@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Behavioural tests for the closed loop, driven through the public API only.
 
+use tpt_thought_consolidation::ResourceSnapshot;
 use tpt_thought_core::{
     Confidence, Probability, StructuredValue, ThoughtState, Timestamp, TransitionKind, Uncertainty,
 };
 use tpt_thought_deliberation::mock::ScriptedEngine;
 use tpt_thought_deliberation::{InvestigationOutcome, InvestigationPolicy, Termination};
 use tpt_thought_loop::{
-    replay, Action, ActionError, ActionSink, CandidatePlan, CognitiveLoop, CognitiveMode,
-    CycleOutcome, CyclePhase, Estimate, Estimator, Input, LoopConfig, Modulation, ModulationError,
-    ModulationFields, NullEngine, NullEstimator, ReplayError, ReplayMetadata, ReplayRecord,
-    SlowStage,
+    replay, Action, ActionError, ActionSink, Admission, CandidatePlan, CognitiveLoop,
+    CognitiveMode, CognitiveRequirement, CycleOutcome, CyclePhase, Estimate, Estimator, Input,
+    LoopConfig, Modulation, ModulationError, ModulationFields, NullEngine, NullEstimator,
+    ReplayError, ReplayMetadata, ReplayRecord, ResourceGate, SlowStage,
 };
 use tpt_thought_observatory::EventKind;
 use tpt_thought_prediction::ErrorLevel;
@@ -748,4 +749,169 @@ fn default_policy_runs_the_full_slow_path() {
         ],
         "NullEngine skips Eve, but the full path is requested"
     );
+}
+
+// ---- Resource gate ------------------------------------------------------------------------------
+
+/// A gate that reports a fixed compute share and either admits every requirement or refuses it,
+/// and counts what it holds and releases.
+struct Gate {
+    compute_free: f64,
+    admits: bool,
+    held: f64,
+    releases: usize,
+}
+
+impl Gate {
+    fn new(compute_free: f64, admits: bool) -> Self {
+        Self {
+            compute_free,
+            admits,
+            held: 0.0,
+            releases: 0,
+        }
+    }
+}
+
+impl ResourceGate for Gate {
+    fn snapshot(&self) -> ResourceSnapshot {
+        ResourceSnapshot {
+            compute_free: self.compute_free,
+            memory_pressure: 0.0,
+            energy_available: 1.0,
+        }
+    }
+
+    fn admit(&mut self, requirement: &CognitiveRequirement) -> Admission {
+        if self.admits {
+            self.held += requirement.estimated_cost;
+            Admission::Admitted
+        } else {
+            Admission::Denied {
+                reason: "compute budget spent".into(),
+            }
+        }
+    }
+
+    fn release(&mut self, requirement: &CognitiveRequirement) {
+        self.held -= requirement.estimated_cost;
+        self.releases += 1;
+    }
+}
+
+fn requirement(cost: f64) -> CognitiveRequirement {
+    CognitiveRequirement {
+        estimated_cost: cost,
+        ..CognitiveRequirement::default()
+    }
+}
+
+#[test]
+fn admitted_cycle_runs_and_releases_what_it_held() {
+    let mut lp = CognitiveLoop::new(
+        neutral_config(7),
+        intellect_knows_grasp(),
+        NullEngine,
+        NullEstimator,
+        Echo::default(),
+    )
+    .expect("loop");
+    let mut gate = Gate::new(1.0, true);
+
+    let report = lp
+        .run_gated(&grasp_input(100), &requirement(40.0), &mut gate)
+        .expect("cycle");
+
+    assert!(matches!(report.outcome, CycleOutcome::Completed { .. }));
+    assert_eq!(lp.sink().calls, 1);
+    assert_eq!(gate.releases, 1, "the admitted cycle returns its compute");
+    assert_eq!(gate.held, 0.0);
+}
+
+#[test]
+fn denied_cycle_reports_the_denial_and_runs_nothing() {
+    let mut lp = CognitiveLoop::new(
+        neutral_config(7),
+        intellect_knows_grasp(),
+        NullEngine,
+        NullEstimator,
+        Echo::default(),
+    )
+    .expect("loop");
+    let mut gate = Gate::new(1.0, false);
+
+    let report = lp
+        .run_gated(&grasp_input(100), &requirement(40.0), &mut gate)
+        .expect("a denial is an outcome, not an error");
+
+    assert_eq!(
+        report.outcome,
+        CycleOutcome::Deferred {
+            reason: "compute budget spent".into()
+        }
+    );
+    assert_eq!(lp.sink().calls, 0, "a denied cycle must not act");
+    assert!(report.prediction.is_none());
+    assert_eq!(
+        gate.releases, 0,
+        "nothing was admitted, so nothing is released"
+    );
+    assert_eq!(
+        lp.trajectory().last().map(|s| s.state),
+        Some(ThoughtState::Uncertain)
+    );
+    assert!(lp
+        .trajectory()
+        .last()
+        .is_some_and(|s| s.detail == "deferred: compute budget spent"));
+}
+
+#[test]
+fn resource_strain_moves_an_idle_cycle_to_the_fast_path() {
+    let calm_idle = LoopConfig::new(
+        7,
+        Modulation::new(fields(&[
+            ("arousal", 0.1),
+            ("urgency", 0.1),
+            ("reward", 0.1),
+            ("novelty", 0.1),
+            ("uncertainty", 0.1),
+        ]))
+        .expect("valid modulation"),
+    );
+    let mut relaxed = CognitiveLoop::new(
+        calm_idle.clone(),
+        intellect_knows_grasp(),
+        NullEngine,
+        NullEstimator,
+        Echo::default(),
+    )
+    .expect("loop");
+    let mut strained = CognitiveLoop::new(
+        calm_idle,
+        intellect_knows_grasp(),
+        NullEngine,
+        NullEstimator,
+        Echo::default(),
+    )
+    .expect("loop");
+
+    let at_rest = relaxed
+        .run_gated(
+            &grasp_input(100),
+            &requirement(1.0),
+            &mut Gate::new(1.0, true),
+        )
+        .expect("cycle");
+    let under_load = strained
+        .run_gated(
+            &grasp_input(100),
+            &requirement(1.0),
+            &mut Gate::new(0.1, true),
+        )
+        .expect("cycle");
+
+    assert_eq!(at_rest.mode, CognitiveMode::Consolidation);
+    assert_eq!(under_load.mode, CognitiveMode::Reactive);
+    assert!(matches!(under_load.outcome, CycleOutcome::Completed { .. }));
 }

@@ -74,6 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("completed `{action}`, prediction error {error:.2} ({level:?})");
         }
         CycleOutcome::Unresolved { reason } => println!("unresolved: {reason}"),
+        CycleOutcome::Deferred { reason } => println!("deferred: {reason}"),
     }
 
     // A recorded run can be re-run, and the re-run must match step for step.

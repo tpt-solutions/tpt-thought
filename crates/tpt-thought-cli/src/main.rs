@@ -158,6 +158,7 @@ fn describe(report: &CycleReport) -> String {
             format!("completed `{action}` (prediction error {error:.2}, {level:?})")
         }
         CycleOutcome::Unresolved { reason } => format!("unresolved: {reason}"),
+        CycleOutcome::Deferred { reason } => format!("deferred: {reason}"),
     }
 }
 
