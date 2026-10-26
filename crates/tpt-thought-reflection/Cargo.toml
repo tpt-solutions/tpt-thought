@@ -7,7 +7,9 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
+keywords = ["cognition", "reflection", "metacognition", "agents", "artifacts"]
+categories = ["rust-patterns", "algorithms"]
 
 [dependencies]
 tpt-thought-core = { workspace = true }

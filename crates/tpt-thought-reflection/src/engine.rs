@@ -227,7 +227,9 @@ impl ReflectionEngine {
         }
 
         if session.status() == crate::session::SessionStatus::Running {
-            let _ = session.complete();
+            if let Err(e) = session.complete() {
+                failure.get_or_insert_with(|| e.to_string());
+            }
         }
         CognitiveReview::from_session(session, reviewed, failure)
     }
