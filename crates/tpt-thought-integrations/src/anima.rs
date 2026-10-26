@@ -18,13 +18,16 @@
 //!   (§23, §39). [`AnimaIntention`] then tracks the winner's execution through INP's
 //!   `NegotiationSession`: the provider runs the work, and Thought records what it reports.
 //!   The global workspace's publish, subscribe and withdraw are not mapped.
+//! - [`AnimaActionSink`] performs Thought's actions through an INP intention round, as the
+//!   [`ActionSink`] port (§24, §25). Providers are offered to the round, INP picks the winner,
+//!   and the winner's executor runs the action.
 //! - [`AnimaEpisodes`] stores Thought episodes in SSE's episode store (§14, §48.2).
 //!
 //! Not mapped, because `tpt-anima` does not provide them: a global workspace, and ZKPA
 //! attestation, proofs and the agency ledger (sessions and delegation are in the `zkpa` module).
 //! CK reports no memory figures, so memory pressure is supplied by the caller.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use tpt_anima_ck::thought_bubble::ThoughtBubbleManager;
 use tpt_anima_ck::types::{IsolationLevel, ThermalConstraints};
@@ -41,7 +44,8 @@ use tpt_anima_sse::{
 use tpt_thought_consolidation::{
     ResourceSnapshot, SleepGrant, SleepRequest, SleepScheduler, ThresholdScheduler,
 };
-use tpt_thought_core::{ContentReference, MemoryRef};
+use tpt_thought_core::{ContentReference, MemoryRef, StructuredValue};
+use tpt_thought_loop::{Action, ActionError, ActionSink};
 use tpt_thought_workspace::{Episode, MemoryStore};
 use uuid::Uuid;
 
@@ -557,6 +561,153 @@ impl AnimaBroadcast {
     }
 }
 
+/// What a registered provider states about its own performance for an action (§23). The sink
+/// turns each claim into an INP [`Offer`] when the provider is offered to a round.
+#[derive(Debug, Clone, Copy)]
+pub struct Claim {
+    /// Estimated cost in INP's cost units.
+    pub estimated_cost: f64,
+    /// Estimated time to complete the action.
+    pub estimated_latency: Duration,
+    /// Estimated accuracy, from 0.0 to 1.0.
+    pub estimated_accuracy: f32,
+    /// The provider's confidence in its own estimates, from 0.0 to 1.0.
+    pub confidence: f32,
+}
+
+/// The work a registered provider does for an action. It receives the action and returns the
+/// outcome it observed, or the reason it declined or failed.
+pub type Executor = Box<dyn FnMut(&Action) -> Result<StructuredValue, ActionError>>;
+
+/// A provider held by [`AnimaActionSink`]: its INP identifier, the action it serves, its claim,
+/// and the executor that runs the work when INP assigns it.
+struct Registered {
+    id: InpAgentId,
+    action: String,
+    claim: Claim,
+    executor: Executor,
+}
+
+/// An [`ActionSink`] that performs each action through an INP intention round (§24, §25).
+///
+/// Providers are registered per action with a [`Claim`] and an executor. On `execute`, every
+/// provider registered for the action is offered to a round through [`AnimaBroadcast`]. INP
+/// selects the winner by its own scoring, the winner's executor runs the action, and the outcome
+/// is recorded on the intention. The value the executor returned goes back to the loop unchanged,
+/// and the loop compares it with the prediction.
+///
+/// What INP provides here: the lookup of providers by action (`CapabilityRegistry`), bid
+/// collection and selection (`IntentBroadcaster`, `NegotiationSession`), and the intention
+/// lifecycle with one recorded outcome.
+///
+/// What INP does not provide here, so it is not claimed:
+///
+/// - INP does not run the work. The winner's executor does, and it reports only the value or the
+///   failure. The recorded cost and accuracy are the winner's claim, and the latency is measured
+///   by this sink.
+/// - INP's QoS limits are not enforced, so no deadline is applied and `ExecutionStatus::TimedOut`
+///   is never recorded.
+/// - INP's fallback strategies are not used. A refused or failed action is returned as an
+///   [`ActionError`], and the loop decides what follows.
+/// - The expected outcome is not sent to providers. Thought compares it with the result itself.
+pub struct AnimaActionSink {
+    broadcast: AnimaBroadcast,
+    providers: Vec<Registered>,
+    next_id: u128,
+}
+
+impl Default for AnimaActionSink {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AnimaActionSink {
+    /// A sink with no providers. The sink is the requester of every round, so its origin is the
+    /// nil identifier, and providers are numbered from one.
+    pub fn new() -> Self {
+        Self {
+            broadcast: AnimaBroadcast::new(InpAgentId::nil()),
+            providers: Vec::new(),
+            next_id: 1,
+        }
+    }
+
+    /// Register a provider for `action` with its `claim` and the `executor` that performs the
+    /// work. Returns the identifier INP uses for the provider. Identifiers follow registration
+    /// order, so the same registrations give the same rounds.
+    pub fn register(
+        &mut self,
+        action: &str,
+        claim: Claim,
+        executor: impl FnMut(&Action) -> Result<StructuredValue, ActionError> + 'static,
+    ) -> InpAgentId {
+        let id = InpAgentId::from_u128(self.next_id);
+        self.next_id += 1;
+        self.broadcast.offer(action, id);
+        self.providers.push(Registered {
+            id,
+            action: action.to_string(),
+            claim,
+            executor: Box::new(executor),
+        });
+        id
+    }
+}
+
+impl ActionSink for AnimaActionSink {
+    /// Run one INP round for `action` and execute the winner. No registered provider, or no
+    /// accepted bid, is a [`ActionError::Refused`]. A failed execution is recorded on the
+    /// intention and returned as the executor's own error, so the sink stays usable.
+    fn execute(&mut self, action: &Action) -> Result<StructuredValue, ActionError> {
+        let offers: Vec<Offer> = self
+            .providers
+            .iter()
+            .filter(|p| p.action == action.name)
+            .map(|p| Offer {
+                provider: p.id,
+                estimated_cost: p.claim.estimated_cost,
+                estimated_latency: p.claim.estimated_latency,
+                estimated_accuracy: p.claim.estimated_accuracy,
+                confidence: p.claim.confidence,
+            })
+            .collect();
+        let mut intention = self
+            .broadcast
+            .open_intention(&action.name, &offers)
+            .map_err(|error| ActionError::Refused(error.to_string()))?;
+        let winner = intention
+            .provider()
+            .ok_or_else(|| ActionError::Failed("INP assigned no provider".into()))?;
+        let registered = self
+            .providers
+            .iter_mut()
+            .find(|p| p.id == winner)
+            .ok_or_else(|| ActionError::Failed("INP assigned an unknown provider".into()))?;
+
+        let started = Instant::now();
+        let result = (registered.executor)(action);
+        let status = match &result {
+            Ok(_) => ExecutionStatus::Completed,
+            Err(ActionError::Refused(reason) | ActionError::Failed(reason)) => {
+                ExecutionStatus::Failed {
+                    reason: reason.clone(),
+                }
+            }
+        };
+        intention
+            .record(Outcome {
+                status,
+                actual_cost: registered.claim.estimated_cost,
+                actual_latency: started.elapsed(),
+                actual_accuracy: registered.claim.estimated_accuracy,
+                proofs: Vec::new(),
+            })
+            .map_err(|error| ActionError::Failed(error.to_string()))?;
+        result
+    }
+}
+
 /// The kind tag under which Thought episodes are stored. The version changes if the encoding does.
 pub const EPISODE_KIND: &str = "tpt-thought.episode.v1";
 
@@ -689,6 +840,8 @@ impl AnimaBubbles {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
 
     fn creator() -> SseAgentId {
         [7; 32]
@@ -1123,5 +1276,94 @@ mod tests {
             budget.grant(&request(), &starved),
             SleepGrant::Deferred { .. }
         ));
+    }
+
+    fn claim(accuracy: f32) -> Claim {
+        Claim {
+            estimated_cost: 1.0,
+            estimated_latency: Duration::from_millis(100),
+            estimated_accuracy: accuracy,
+            confidence: 0.9,
+        }
+    }
+
+    fn action(name: &str) -> Action {
+        Action {
+            intention: tpt_thought_core::IdGenerator::new(tpt_thought_core::SeededEntropy::new(1))
+                .intention(),
+            name: name.into(),
+            expected: StructuredValue::Text("held".into()),
+        }
+    }
+
+    #[test]
+    fn the_winning_provider_executes_and_its_result_is_returned() {
+        let slow_calls = Arc::new(AtomicUsize::new(0));
+        let accurate_calls = Arc::new(AtomicUsize::new(0));
+        let mut sink = AnimaActionSink::new();
+        let calls = slow_calls.clone();
+        sink.register("grasp", claim(0.6), move |_| {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Ok(StructuredValue::Text("slipped".into()))
+        });
+        let calls = accurate_calls.clone();
+        sink.register("grasp", claim(0.95), move |_| {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Ok(StructuredValue::Text("held".into()))
+        });
+        let result = sink.execute(&action("grasp")).expect("the winner executes");
+        assert_eq!(result, StructuredValue::Text("held".into()));
+        assert_eq!(accurate_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(slow_calls.load(Ordering::SeqCst), 0, "only the winner runs");
+    }
+
+    #[test]
+    fn an_action_with_no_provider_is_refused_with_a_typed_error() {
+        let mut sink = AnimaActionSink::new();
+        assert!(matches!(
+            sink.execute(&action("grasp")),
+            Err(ActionError::Refused(_))
+        ));
+        sink.register("launch", claim(0.9), |_| {
+            Ok(StructuredValue::Text("launched".into()))
+        });
+        assert!(matches!(
+            sink.execute(&action("grasp")),
+            Err(ActionError::Refused(_))
+        ));
+    }
+
+    #[test]
+    fn a_failed_execution_is_reported_and_the_sink_stays_usable() {
+        let mut sink = AnimaActionSink::new();
+        let mut attempts = 0;
+        sink.register("grasp", claim(0.9), move |_| {
+            attempts += 1;
+            if attempts == 1 {
+                Err(ActionError::Failed("disk full".into()))
+            } else {
+                Ok(StructuredValue::Text("held".into()))
+            }
+        });
+        assert_eq!(
+            sink.execute(&action("grasp")),
+            Err(ActionError::Failed("disk full".into()))
+        );
+        assert_eq!(
+            sink.execute(&action("grasp")),
+            Ok(StructuredValue::Text("held".into()))
+        );
+    }
+
+    #[test]
+    fn a_refusal_by_the_winner_is_reported_as_a_refusal() {
+        let mut sink = AnimaActionSink::new();
+        sink.register("grasp", claim(0.9), |_| {
+            Err(ActionError::Refused("gripper locked".into()))
+        });
+        assert_eq!(
+            sink.execute(&action("grasp")),
+            Err(ActionError::Refused("gripper locked".into()))
+        );
     }
 }
