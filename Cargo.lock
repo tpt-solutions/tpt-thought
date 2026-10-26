@@ -681,7 +681,7 @@ dependencies = [
 [[package]]
 name = "tpt-augur-frontend"
 version = "0.1.0"
-source = "git+https://github.com/TPT-Solutions/tpt-augur?rev=634f67a5ed632f9bba082cafeeb921c22dc18195#634f67a5ed632f9bba082cafeeb921c22dc18195"
+source = "git+https://github.com/TPT-Solutions/tpt-augur?rev=c29ecd1781f9f2b8d04b971329340c44349fcbfb#c29ecd1781f9f2b8d04b971329340c44349fcbfb"
 dependencies = [
  "serde",
 ]
@@ -689,7 +689,7 @@ dependencies = [
 [[package]]
 name = "tpt-augur-ir"
 version = "0.1.0"
-source = "git+https://github.com/TPT-Solutions/tpt-augur?rev=634f67a5ed632f9bba082cafeeb921c22dc18195#634f67a5ed632f9bba082cafeeb921c22dc18195"
+source = "git+https://github.com/TPT-Solutions/tpt-augur?rev=c29ecd1781f9f2b8d04b971329340c44349fcbfb#c29ecd1781f9f2b8d04b971329340c44349fcbfb"
 dependencies = [
  "serde",
  "tpt-augur-frontend",
@@ -699,7 +699,7 @@ dependencies = [
 [[package]]
 name = "tpt-augur-runtime"
 version = "0.1.0"
-source = "git+https://github.com/TPT-Solutions/tpt-augur?rev=634f67a5ed632f9bba082cafeeb921c22dc18195#634f67a5ed632f9bba082cafeeb921c22dc18195"
+source = "git+https://github.com/TPT-Solutions/tpt-augur?rev=c29ecd1781f9f2b8d04b971329340c44349fcbfb#c29ecd1781f9f2b8d04b971329340c44349fcbfb"
 dependencies = [
  "rand 0.8.8",
  "tpt-augur-frontend",
@@ -710,7 +710,7 @@ dependencies = [
 [[package]]
 name = "tpt-augur-std"
 version = "0.1.0"
-source = "git+https://github.com/TPT-Solutions/tpt-augur?rev=634f67a5ed632f9bba082cafeeb921c22dc18195#634f67a5ed632f9bba082cafeeb921c22dc18195"
+source = "git+https://github.com/TPT-Solutions/tpt-augur?rev=c29ecd1781f9f2b8d04b971329340c44349fcbfb#c29ecd1781f9f2b8d04b971329340c44349fcbfb"
 dependencies = [
  "rand 0.8.8",
  "serde",
@@ -861,6 +861,7 @@ dependencies = [
  "tpt-thought-deliberation",
  "tpt-thought-graph",
  "tpt-thought-hypothesis",
+ "tpt-thought-integrations",
  "tpt-thought-intention",
  "tpt-thought-loop",
  "tpt-thought-observatory",
@@ -881,6 +882,15 @@ dependencies = [
  "proptest",
  "serde",
  "tpt-thought-core",
+]
+
+[[package]]
+name = "tpt-thought-cli"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tpt-thought",
 ]
 
 [[package]]
@@ -976,11 +986,13 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+ "tpt-thought-consolidation",
  "tpt-thought-core",
  "tpt-thought-deliberation",
  "tpt-thought-hypothesis",
  "tpt-thought-intention",
  "tpt-thought-observatory",
+ "tpt-thought-policy",
  "tpt-thought-prediction",
  "tpt-thought-provenance",
  "tpt-thought-providers",
