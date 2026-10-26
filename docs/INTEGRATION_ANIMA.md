@@ -57,12 +57,53 @@ Episode persistence (§14, §48.2) was missing and is now provided by `tpt-anima
 It stores opaque payloads under a kind tag, and `AnimaEpisodes` encodes Thought episodes as JSON.
 
 ZKPA is used with `default-features = false`, which removes the tokio runtime that `async_proofs`
-needs. The `zkpa` feature wraps sessions and delegation in `AnimaIdentity`. Attestation, proofs and
-the agency ledger are not mapped.
+needs. The `zkpa` feature wraps the following in `AnimaIdentity`:
+
+- sessions and delegation (§40);
+- attestation evidence through `AttestationService`, and its check into provenance. The check is
+  structural only: it verifies a 32-byte digest and the verified flag, and does not recompute the
+  digest or check a platform signature;
+- Groth16 authorization proofs over BN254, verified with `ProofGenerator::verify`. The check uses the
+  verification key embedded in the proof, so it shows internal consistency, not a trusted setup. The
+  proof is not bound to a particular agent.
+
+Ownership states and the agency ledger have no counterpart in the pinned `tpt-anima-zkpa`, so they
+are not mapped. Delegation grants permissions, not responsibility, so it is not treated as
+`ThoughtOwnership::Delegated`.
+
+## Resource admission and homeostasis
+
+`AnimaBudget` implements `ResourceGate`, so a cycle run with `CognitiveLoop::run_gated` asks CK
+before any provider is consulted. A denied cycle returns `CycleOutcome::Deferred` with CK's reason,
+runs nothing and holds nothing. Only the estimated cost reaches CK. Priority, deadline and risk are
+carried in the requirement but not used, because CK's budget manager has no path for them here.
+
+Resource strain raises arousal only, and never lowers it. Urgency, risk, uncertainty and the rest
+still come from the thought. Uncertain thoughts still investigate under pressure.
+
+## Consolidation persistence
+
+`AnimaConsolidation` persists consolidated knowledge and history summaries to SSE through
+`CognitiveLoop::persist_consolidation`. Each item is stored once, under a content-addressed id, so a
+repeated consolidation of the same result stores nothing. Thought keeps only the references. Episodes,
+confidence bins, the next-session state and working state stay where they are: episodes are already in
+SSE, and the rest are re-derived or Thought-owned.
+
+## Action execution through INP
+
+`AnimaActionSink` implements the loop's `ActionSink`. Each action is offered to the providers
+registered for it, INP picks the winner, and the winner's executor runs the action. The loop never
+sees INP. INP does not run the work, does not enforce QoS deadlines, and does not use fallbacks.
+
+## Multi-agent thought sharing
+
+`share::ThoughtBroadcast` sends a shared thought to each offered peer over INP, one peer at a time.
+Each peer evaluates it with its own providers, and the replies are merged by `providers::sharing`.
+The merge rule and the transport are documented in those modules.
 
 ## Blocked
 
-- Episode persistence cannot be mapped until `tpt-anima-sse` has an episode type.
+- None in the Anima mapping. Ownership states and the agency ledger are not in the pinned sibling.
 
 ## Tests
 

@@ -25,7 +25,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
@@ -40,23 +40,23 @@ minicbor-serde = { version = "0.4", features = ["std"] }
 sha2 = "0.10"
 proptest = "1"
 
-tpt-thought-core = { path = "crates/tpt-thought-core", version = "0.1.0" }
-tpt-thought-state = { path = "crates/tpt-thought-state", version = "0.1.0" }
-tpt-thought-provenance = { path = "crates/tpt-thought-provenance", version = "0.1.0" }
-tpt-thought-attention = { path = "crates/tpt-thought-attention", version = "0.1.0" }
-tpt-thought-graph = { path = "crates/tpt-thought-graph", version = "0.1.0" }
-tpt-thought-observatory = { path = "crates/tpt-thought-observatory", version = "0.1.0" }
-tpt-thought-consolidation = { path = "crates/tpt-thought-consolidation", version = "0.1.0" }
-tpt-thought-reflection = { path = "crates/tpt-thought-reflection", version = "0.1.0" }
-tpt-thought-safety = { path = "crates/tpt-thought-safety", version = "0.1.0" }
-tpt-thought-workspace = { path = "crates/tpt-thought-workspace", version = "0.1.0" }
-tpt-thought-policy = { path = "crates/tpt-thought-policy", version = "0.1.0" }
-tpt-thought-deliberation = { path = "crates/tpt-thought-deliberation", version = "0.1.0" }
-tpt-thought-providers = { path = "crates/tpt-thought-providers", version = "0.1.0" }
-tpt-thought-prediction = { path = "crates/tpt-thought-prediction", version = "0.1.0" }
-tpt-thought-hypothesis = { path = "crates/tpt-thought-hypothesis", version = "0.1.0" }
-tpt-thought-intention = { path = "crates/tpt-thought-intention", version = "0.1.0" }
-tpt-thought-loop = { path = "crates/tpt-thought-loop", version = "0.1.0" }
+tpt-thought-core = { path = "crates/tpt-thought-core", version = "0.1.1" }
+tpt-thought-state = { path = "crates/tpt-thought-state", version = "0.1.1" }
+tpt-thought-provenance = { path = "crates/tpt-thought-provenance", version = "0.1.1" }
+tpt-thought-attention = { path = "crates/tpt-thought-attention", version = "0.1.1" }
+tpt-thought-graph = { path = "crates/tpt-thought-graph", version = "0.1.1" }
+tpt-thought-observatory = { path = "crates/tpt-thought-observatory", version = "0.1.1" }
+tpt-thought-consolidation = { path = "crates/tpt-thought-consolidation", version = "0.1.1" }
+tpt-thought-reflection = { path = "crates/tpt-thought-reflection", version = "0.1.1" }
+tpt-thought-safety = { path = "crates/tpt-thought-safety", version = "0.1.1" }
+tpt-thought-workspace = { path = "crates/tpt-thought-workspace", version = "0.1.1" }
+tpt-thought-policy = { path = "crates/tpt-thought-policy", version = "0.1.1" }
+tpt-thought-deliberation = { path = "crates/tpt-thought-deliberation", version = "0.1.1" }
+tpt-thought-providers = { path = "crates/tpt-thought-providers", version = "0.1.1" }
+tpt-thought-prediction = { path = "crates/tpt-thought-prediction", version = "0.1.1" }
+tpt-thought-hypothesis = { path = "crates/tpt-thought-hypothesis", version = "0.1.1" }
+tpt-thought-intention = { path = "crates/tpt-thought-intention", version = "0.1.1" }
+tpt-thought-loop = { path = "crates/tpt-thought-loop", version = "0.1.1" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -2,7 +2,7 @@
 
 Adapters from TPT Thought to the sibling TPT repositories: Intellect, Eve, Anima, Augur and Axiom.
 
-**Status:** pre-release, v0.1.0. Distributed from git only; not published to crates.io. Each
+**Status:** pre-release, v0.1.1. Distributed from git only; not published to crates.io. Each
 sibling is pinned to a git revision, and the pins are listed below.
 
 This is the only crate in the workspace that depends on sibling repositories. Every sibling sits
@@ -18,7 +18,7 @@ workspace never fetches a sibling.
 | `local` | `remote`, plus `tpt-infer` (not pinned in its own manifest; `Cargo.lock` pins it) | `local::LocalClassifier` | `IntelligenceProvider` |
 | `eve` | `tpt-eve` `db6e8df72344dc820bcf5fac5b9aaff8e438ef48` | `eve::EveAdapter` | `DeliberationEngine` |
 | `anima` | `tpt-anima` `5e9da51b4e13b79204bcfeeabaf915cb224d7bdf` | `anima::AnimaMemory`, `anima::AnimaBudget`, `anima::AnimaBroadcast` | `MemoryStore` (tag and similarity recall), a budget signal, a resource snapshot, intention negotiation and `SleepScheduler` |
-| `zkpa` | `tpt-anima` `5e9da51b4e13b79204bcfeeabaf915cb224d7bdf` (`tpt-anima-zkpa`, `default-features = false`) | `zkpa::AnimaIdentity` | Task-scoped sessions and permission delegation (§40) |
+| `zkpa` | `tpt-anima` `5e9da51b4e13b79204bcfeeabaf915cb224d7bdf` (`tpt-anima-zkpa`, `default-features = false`) | `zkpa::AnimaIdentity` | Task-scoped sessions, permission delegation, attestation and Groth16 authorization proofs (§40) |
 | `augur` | `tpt-augur` `c29ecd17` | `augur::AugurAdapter` | Posterior records with residual uncertainty |
 | `axiom` | `tpt-axiom` `42c495f7751db5acc3c571bb890da41a153f75ba` | `axiom::probability`, `axiom::confidence`, `axiom::uncertainty` | `Probability`, `Confidence`, `Uncertainty` |
 
@@ -62,8 +62,8 @@ feature also enables the `tpt-thought-consolidation` dependency, since `AnimaBud
 These are recorded as blocked rather than invented:
 
 - **Anima gaps.** `tpt-anima` has no global workspace. `retrieve_context` is not provided, but
-  `recall_similar` covers the same role. ZKPA attestation, proofs and the agency ledger are not
-  mapped.
+  `recall_similar` covers the same role. ZKPA ownership states and the agency ledger are not
+  mapped, because the pinned sibling has no counterpart.
 - **Eve gaps.** `tpt-eve` has no deliberation entry point. `tpt-eve-neural` pulls in tokio, so it is
   not used.
 - **Augur gaps.** There is no evidence-update or residual-uncertainty API. Residual uncertainty is

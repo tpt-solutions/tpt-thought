@@ -2,7 +2,7 @@
 
 Cognitive process orchestration and thought representation, in Rust, by TPT Solutions.
 
-**Status:** pre-release, v0.1.0. Distributed from git only; not published to crates.io. See
+**Status:** pre-release, v0.1.1. Distributed from git only; not published to crates.io. See
 `docs/DEPENDENCY_POLICY.md`.
 
 A *thought* is a dynamically evolving cognitive state that can receive stimuli, retrieve

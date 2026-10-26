@@ -5,7 +5,7 @@ thinking came from, links to its parents, and is sealed with a SHA-256 digest, s
 any ancestor can be detected. The store can answer "why did the agent think this?" from structure
 alone.
 
-> **Status:** pre-release (v0.1.0). Distributed from git only, not on crates.io.
+> **Status:** pre-release (v0.1.1). Distributed from git only, not on crates.io.
 
 ## Installation
 

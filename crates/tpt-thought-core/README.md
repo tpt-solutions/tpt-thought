@@ -3,7 +3,7 @@
 The vocabulary of TPT Thought: thoughts, identifiers, confidence, uncertainty, time, content and
 the versioned wire format. Every other `tpt-thought-*` crate builds on the types defined here.
 
-> **Status:** pre-release (v0.1.0). Distributed from git only, not on crates.io. See
+> **Status:** pre-release (v0.1.1). Distributed from git only, not on crates.io. See
 > `docs/DEPENDENCY_POLICY.md` for the release policy.
 
 ## Installation

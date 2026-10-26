@@ -3,7 +3,7 @@
 The facade for TPT Thought. It re-exports the public API of the Thought crates under one name, so
 a program can depend on a single crate and reach every subsystem through a module path.
 
-> **Status:** pre-release (v0.1.0). Distributed from git only, not on crates.io.
+> **Status:** pre-release (v0.1.1). Distributed from git only, not on crates.io.
 
 TPT Thought is cognitive process orchestration and thought representation. A *thought* is a
 dynamically evolving cognitive state that receives stimuli, retrieves memories, forms hypotheses,

@@ -3,7 +3,7 @@
 The lifecycle state machine for a thought. It defines which events may move a thought from one
 state to another, and it refuses every other move.
 
-> **Status:** pre-release (v0.1.0). Distributed from git only, not on crates.io.
+> **Status:** pre-release (v0.1.1). Distributed from git only, not on crates.io.
 
 ## Installation
 

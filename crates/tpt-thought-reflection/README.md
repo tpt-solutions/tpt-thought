@@ -10,7 +10,7 @@ production and a stub in tests.
 Reflection sits between two other modes. Online thought is latency-bound and cannot change durable
 belief. Sleep is offline consolidation, which `tpt-thought-consolidation` owns.
 
-> **Status:** pre-release, `v0.1.0`. Distributed from git only, not published on crates.io.
+> **Status:** pre-release, `v0.1.1`. Distributed from git only, not published on crates.io.
 
 ## What it does
 

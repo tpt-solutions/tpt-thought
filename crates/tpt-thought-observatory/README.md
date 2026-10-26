@@ -3,7 +3,7 @@
 Telemetry events, cognitive metrics, telemetry sinks and observatory data snapshots for
 TPT Thought.
 
-**Status:** pre-release, v0.1.0. Distributed from git only; not published to crates.io. See the
+**Status:** pre-release, v0.1.1. Distributed from git only; not published to crates.io. See the
 repository's `docs/DEPENDENCY_POLICY.md`.
 
 ## What it does

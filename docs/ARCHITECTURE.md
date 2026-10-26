@@ -61,6 +61,7 @@ sequenceDiagram
     participant Mem as MemoryStore
     participant Prov as Providers (fast or deliberative)
     participant Slow as Engine, Estimator, Intellect
+    participant Gate as ResourceGate
     participant Exec as ActionSink
 
     Caller->>Loop: run(Input)
@@ -68,6 +69,10 @@ sequenceDiagram
     Loop->>Mem: retrieve(cue, limit)
     Mem-->>Loop: memory references
     Loop->>Loop: associate, hypothesise
+    opt gated run (run_gated)
+        Loop->>Gate: admit requirement
+        Gate-->>Loop: admitted or deferred
+    end
     Loop->>Prov: evaluate and decide (mode from modulation)
     alt accepted
         Prov-->>Loop: Decision

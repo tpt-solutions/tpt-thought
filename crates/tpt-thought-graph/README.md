@@ -3,7 +3,7 @@
 Typed relationships between thoughts, hypotheses, beliefs, observations, predictions and actions,
 with the graph invariants enforced on insertion and bounded recursive spawning of thoughts.
 
-> **Status:** pre-release (v0.1.0). This crate is distributed from git only and is not published
+> **Status:** pre-release (v0.1.1). This crate is distributed from git only and is not published
 > to crates.io. See `docs/DEPENDENCY_POLICY.md` in the repository.
 
 ## What it does

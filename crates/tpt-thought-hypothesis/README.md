@@ -3,7 +3,7 @@
 Branching hypotheses, their lifecycle, collapse to a single choice, contradictions between them,
 expected information gain, and the evidence-gated pipeline by which a claim may become a belief.
 
-> **Status:** pre-release (v0.1.0). This crate is distributed from git only and is not published
+> **Status:** pre-release (v0.1.1). This crate is distributed from git only and is not published
 > to crates.io. See `docs/DEPENDENCY_POLICY.md` in the repository.
 
 ## What it does

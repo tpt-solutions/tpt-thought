@@ -3,7 +3,7 @@
 The test suites and benchmark harness for TPT Thought. This crate has no library API of its own.
 It exists so that the cross-crate suites run under `cargo test` and `cargo bench`.
 
-**Status:** pre-release, v0.1.0. Not published (`publish = false`). It is part of the repository
+**Status:** pre-release, v0.1.1. Not published (`publish = false`). It is part of the repository
 only.
 
 ## What it is for

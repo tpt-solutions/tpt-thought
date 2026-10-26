@@ -3,7 +3,7 @@
 Attention scoring, cognitive demand and working memory. This crate calculates how much a thought
 matters and how much cognition it asks for. It never schedules compute itself.
 
-> **Status:** pre-release (v0.1.0). Distributed from git only, not on crates.io.
+> **Status:** pre-release (v0.1.1). Distributed from git only, not on crates.io.
 
 ## Installation
 

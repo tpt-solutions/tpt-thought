@@ -4,7 +4,7 @@ The closed cognitive loop for TPT Thought: one cycle observes, contextualises, a
 hypothesises, evaluates, decides, intends, acts, observes the result, learns and consolidates. A
 run can be recorded and replayed to check that it reproduces.
 
-**Status:** pre-release, v0.1.0. Distributed from git only; not published to crates.io. See the
+**Status:** pre-release, v0.1.1. Distributed from git only; not published to crates.io. See the
 repository's `docs/DEPENDENCY_POLICY.md`.
 
 ## What it does

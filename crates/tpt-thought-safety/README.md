@@ -8,7 +8,7 @@ not run cognition, execute actions or talk to a backend. Callers ask the types h
 is allowed, and a refusal comes back as an error that names the reason. The threats each module
 answers are listed in `docs/THREAT_MODEL.md`.
 
-> **Status:** pre-release, `v0.1.0`. Distributed from git only, not published on crates.io.
+> **Status:** pre-release, `v0.1.1`. Distributed from git only, not published on crates.io.
 
 ## What it does
 

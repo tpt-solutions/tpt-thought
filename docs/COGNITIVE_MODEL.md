@@ -97,6 +97,11 @@ update belief. Thresholds are configurable.
 Every significant step can emit a `ProvenanceRecord`, hash-linked to its parents. `explain`
 returns the full derivation of a thought without any generated explanation.
 
+A captured replay record carries the provenance of each step. `replay` verifies the hashes of that
+chain before it runs anything, then compares the re-run's provenance with the recorded chain field
+by field. A record without provenance replays on its trajectory alone, so the provenance checks
+cannot be proven present on such a record.
+
 ## Reflection, sleep and learning
 
 - **Online thought** is latency-bound and makes no durable belief change.

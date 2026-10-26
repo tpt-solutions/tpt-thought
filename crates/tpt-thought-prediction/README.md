@@ -4,7 +4,7 @@ Predictions, the measured error when an observation resolves one, and the respon
 maps an error's size to the actions the cognitive system takes, plus a fan-out hook for the
 subsystems that learn from it.
 
-> **Status:** pre-release (v0.1.0). This crate is distributed from git only and is not published
+> **Status:** pre-release (v0.1.1). This crate is distributed from git only and is not published
 > to crates.io. See `docs/DEPENDENCY_POLICY.md` in the repository.
 
 ## What it does

@@ -4,7 +4,7 @@ A provider-neutral trait for reasoning engines, the request and result shapes of
 capability, metacognition, and a bounded deep-investigation loop that drives an engine until its
 answer is good enough, risky, or needs a human.
 
-> **Status:** pre-release (v0.1.0). This crate is distributed from git only and is not published
+> **Status:** pre-release (v0.1.1). This crate is distributed from git only and is not published
 > to crates.io. See `docs/DEPENDENCY_POLICY.md` in the repository.
 
 ## What it does

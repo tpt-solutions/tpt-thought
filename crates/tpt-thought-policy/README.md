@@ -7,7 +7,7 @@ to a deeper level of cognition, or stop. It does not perform cognition itself. E
 pure function of a `PolicyContext`, so the same inputs always produce the same decision and a run
 can be replayed.
 
-> **Status:** pre-release, `v0.1.0`. Distributed from git only, not published on crates.io.
+> **Status:** pre-release, `v0.1.1`. Distributed from git only, not published on crates.io.
 
 ## What it does
 

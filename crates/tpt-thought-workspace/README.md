@@ -9,7 +9,7 @@ returns identifiers, a record of what happened in an episode, and a sandbox for 
 cognition. Durable memory and the shared workspace itself belong to Anima. This crate ships an
 in-process workspace for tests and standalone use, and nothing else that persists.
 
-> **Status:** pre-release, `v0.1.0`. Distributed from git only, not published on crates.io.
+> **Status:** pre-release, `v0.1.1`. Distributed from git only, not published on crates.io.
 
 ## What it does
 

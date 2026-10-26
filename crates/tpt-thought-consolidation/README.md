@@ -11,7 +11,7 @@ can resume later.
 Anima CK decides when sleep is affordable. This crate never schedules CPU. Anima owns memory decay.
 Thought owns relevance, which is what this crate computes.
 
-> **Status:** pre-release, `v0.1.0`. Distributed from git only, not published on crates.io.
+> **Status:** pre-release, `v0.1.1`. Distributed from git only, not published on crates.io.
 
 ## What it does
 

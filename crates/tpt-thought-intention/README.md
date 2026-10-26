@@ -4,7 +4,7 @@ Intentions for TPT Thought: the goals a thought commits to, with their constrain
 tolerance, priority, deadline, required capabilities and provenance, plus a lifecycle and a set
 type for priority and deadline queries.
 
-**Status:** pre-release, v0.1.0. Distributed from git only; not published to crates.io. See the
+**Status:** pre-release, v0.1.1. Distributed from git only; not published to crates.io. See the
 repository's `docs/DEPENDENCY_POLICY.md`.
 
 ## What it does

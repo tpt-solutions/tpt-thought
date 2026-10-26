@@ -4,7 +4,7 @@ The provider-neutral intelligence layer: a trait that any answering source imple
 that discovers and ranks providers under request constraints, calibration of their track records,
 cognition modes that decide when to ask more, ensemble disagreement, and a human provider.
 
-> **Status:** pre-release (v0.1.0). This crate is distributed from git only and is not published
+> **Status:** pre-release (v0.1.1). This crate is distributed from git only and is not published
 > to crates.io. See `docs/DEPENDENCY_POLICY.md` in the repository.
 
 ## What it does

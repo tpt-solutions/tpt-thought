@@ -22,12 +22,13 @@ Facts, observations and causal relations are supplied through `assert_fact`, `ob
 | `validate_abstraction` | `AbstractionEngine::mine_principles` | implemented; principles with partial support are reported as `Conditional`; analogy targets are noted but not validated |
 | `analyse_contradictions` | `tpt-eve-symbolic` `ConsistencyChecker` | implemented; each claim must be `subject predicate object`, with the object as the rest of the statement. Only `is` and `was` are exclusive, so only they conflict, and identical repeats do not |
 | `rank_queries` | none in `tpt-eve` | unsupported |
-| `reason`, `investigate` | none; `tpt-eve` has no deliberation entry point | unsupported |
+| `investigate` | `MetaCognitionEngine` calibration and gaps | implemented; one step reports the mean confidence of the facts supplied, the residual uncertainty, the share of facts below 0.5 as risk, and whether any gap needs a human. Eve cannot acquire evidence, so with no facts the step stops on risk |
+| `reason` | none; `tpt-eve` has no conclusion-producing entry point | unsupported |
 
 ## Blocked
 
 - `tpt-eve-neural` depends on tokio and async-trait, so it is excluded.
-- `tpt-eve` has no deliberation entry point, so `reason` and `investigate` have no Eve source.
+- `tpt-eve` has no conclusion-producing entry point, so `reason` has no Eve source.
 
 ## Tests
 

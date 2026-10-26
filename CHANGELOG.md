@@ -5,7 +5,24 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-27
+
 ### Added
+
+- Eve `investigate`: one bounded step over Eve's metacognition, so the real-adapter golden scenario
+  runs the Eve stage.
+- Replay verifies provenance: the hash chain is checked before a re-run, and each step's provenance
+  is compared field by field. Records without provenance still replay on their trajectory.
+- CK admission: `ResourceGate` and `CognitiveLoop::run_gated`. A denied cycle returns
+  `CycleOutcome::Deferred` and runs nothing. `AnimaBudget` implements the gate.
+- Resource strain raises arousal only, through `Modulation::under_pressure`.
+- Consolidation persistence to SSE: `AnimaConsolidation` and `CognitiveLoop::persist_consolidation`,
+  content-addressed and idempotent. Thought keeps references only.
+- `AnimaActionSink`: actions are executed through an INP intention round, and the loop never sees INP.
+- Multi-agent thought sharing: `providers::sharing` (pure merge rule) and `share` (INP transport).
+- ZKPA attestation evidence, structural check into provenance, and Groth16 authorization proofs.
+- The real-adapter golden scenario runs the full slow path (Intellect, Eve, Augur, re-evaluation).
+  Acceptance criteria F (Eve deliberation) and H (intention executed) now have tests.
 
 - `tpt-thought-core`: IDs, thoughts, observations, hypotheses, beliefs, predictions, intentions,
   outcomes, confidence, uncertainty, time (injectable clock) and a versioned wire format. Source
@@ -86,11 +103,13 @@ All notable changes to this project are recorded here. The format follows
 
 ### Not yet included
 
-- Eve contradiction analysis: `tpt-eve-symbolic` pulls in `option-ext` (MPL-2.0) through `dirs`.
-- Eve query ranking, and any Eve deliberation entry point (`reason`, `investigate`).
-- Pulse adapter: `tpt-pulse` has no event stream.
-- Anima: `retrieve_context`, episode persistence, a global workspace and a ZKPA identity type.
-- Axiom formal constraints and ZK verification markers.
-- Ollama and `tpt-spark` adapters.
+- Eve `reason`: `tpt-eve` has no conclusion-producing entry point. Eve query ranking has no
+  tokio-free API.
+- Anima: a global workspace, `retrieve_context` (covered by `recall_similar`), and ZKPA ownership
+  states and the agency ledger, which the pinned sibling does not provide.
+- Axiom: `Proven` status, which needs ZK proof verification.
+- Ollama and `tpt-spark` local providers. Neither is in the sibling survey.
 - Observatory UI, which belongs to Anima's Observatory.
+- Multi-agent sharing: the replies travel over INP through the caller's `PeerLink`. The
+  consolidator still holds its in-process working copy until the next abstraction step.
 - Distribution to crates.io. Releases are git-only; see `docs/DEPENDENCY_POLICY.md`.
