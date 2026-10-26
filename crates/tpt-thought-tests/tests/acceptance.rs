@@ -50,12 +50,12 @@ fn eve_reports(confidence: f64) -> ScriptedEngine {
 fn build_with(
     config: &LoopConfig,
     registry: ProviderRegistry,
-) -> Result<CognitiveLoop<NoEngine, NoEstimate, Echo>, LoopError> {
+) -> Result<CognitiveLoop<NullEngine, NullEstimator, Echo>, LoopError> {
     CognitiveLoop::new(
         config.clone(),
         registry,
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
 }
@@ -184,7 +184,7 @@ fn e_uncertain_decision_escalates() {
     let mut lp = CognitiveLoop::new(
         config,
         registry_answering("intellect", 0.3),
-        NoEngine,
+        NullEngine,
         Fixed(Estimate {
             mean: 0.5,
             residual_uncertainty: 0.2,
@@ -210,7 +210,7 @@ fn f_eve_deliberation_is_invoked() {
         config,
         registry_answering("intellect", 0.3),
         eve_reports(0.9),
-        NoEstimate,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");
@@ -226,8 +226,8 @@ fn g_prediction_is_created() {
     let mut lp = CognitiveLoop::new(
         neutral_config(7),
         registry_answering("intellect", 0.95),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Returns {
             value: StructuredValue::Text("dropped".into()),
             calls: Arc::new(AtomicUsize::new(0)),
@@ -258,8 +258,8 @@ fn h_intention_is_executed() {
     let mut lp = CognitiveLoop::new(
         neutral_config(8),
         registry_answering("intellect", 0.95),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         echo,
     )
     .expect("loop");
@@ -274,8 +274,8 @@ fn i_predicted_and_actual_outcomes_are_compared() {
     let mut lp = CognitiveLoop::new(
         neutral_config(9),
         registry_answering("intellect", 0.95),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Returns {
             value: StructuredValue::Text("dropped".into()),
             calls: Arc::new(AtomicUsize::new(0)),
@@ -434,8 +434,8 @@ fn e_confident_answer_does_not_escalate() {
     let mut lp = CognitiveLoop::new(
         config,
         registry_answering("intellect", 0.95),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");

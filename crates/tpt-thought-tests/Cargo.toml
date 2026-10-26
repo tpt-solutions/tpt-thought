@@ -1,13 +1,15 @@
 [package]
 name = "tpt-thought-tests"
 description = "TPT Thought test suites: acceptance criteria, adversarial, property, decoder fuzzing and benchmarks"
+keywords = ["cognition", "testing", "property-testing", "benchmarks", "replay"]
+categories = ["development-tools::testing"]
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
 publish = false
 
 [features]

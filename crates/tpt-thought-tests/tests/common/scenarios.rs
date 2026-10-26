@@ -60,8 +60,8 @@ pub fn run_all(cycles: usize) -> Metrics {
     let mut lp = CognitiveLoop::new(
         neutral_config(91),
         registry,
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");
@@ -125,8 +125,8 @@ fn run_reactive(confidence: f64, at: i64) -> tpt_thought_loop::CycleReport {
     let mut lp = CognitiveLoop::new(
         config,
         registry_answering("intellect", confidence),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");
@@ -178,8 +178,8 @@ pub fn replay_steps(cycles: usize) -> usize {
         CognitiveLoop::new(
             c.clone(),
             registry_answering("intellect", 0.95),
-            NoEngine,
-            NoEstimate,
+            NullEngine,
+            NullEstimator,
             Echo::default(),
         )
     })

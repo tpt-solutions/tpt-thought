@@ -60,8 +60,8 @@ fn real_d_intellect_is_consulted_and_recorded_as_source() {
     let mut lp = CognitiveLoop::new(
         reactive_config(9),
         registry,
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");
@@ -95,7 +95,7 @@ fn real_f_eve_adapter_declines_investigation() {
         config,
         registry_answering("intellect", 0.3),
         EveAdapter::new(6),
-        NoEstimate,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");

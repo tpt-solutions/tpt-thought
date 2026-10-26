@@ -9,7 +9,6 @@ use std::sync::Arc;
 use tpt_thought_core::{
     Confidence, IdGenerator, Probability, SeededEntropy, StructuredValue, Timestamp,
 };
-use tpt_thought_deliberation::DeliberationEngine;
 use tpt_thought_loop::{
     Action, ActionError, ActionSink, CandidatePlan, Estimate, Estimator, Input, LoopConfig,
     Modulation, ModulationFields,
@@ -72,19 +71,7 @@ pub fn registry_answering(id: &str, confidence: f64) -> ProviderRegistry {
     registry
 }
 
-/// A deliberation engine that supports nothing, so Eve is skipped.
-pub struct NoEngine;
-
-impl DeliberationEngine for NoEngine {}
-
-/// An estimator with no opinion, so Augur contributes nothing.
-pub struct NoEstimate;
-
-impl Estimator for NoEstimate {
-    fn estimate(&self, _question: &str) -> Option<Estimate> {
-        None
-    }
-}
+pub use tpt_thought_loop::{NullEngine, NullEstimator};
 
 /// An estimator that always answers with the same estimate.
 pub struct Fixed(pub Estimate);

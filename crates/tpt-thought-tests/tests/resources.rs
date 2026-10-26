@@ -71,7 +71,7 @@ fn investigation_never_exceeds_its_step_cap() {
             inner: engine,
             steps: steps.clone(),
         },
-        NoEstimate,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");

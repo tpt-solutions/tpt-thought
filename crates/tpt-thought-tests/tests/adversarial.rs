@@ -155,8 +155,14 @@ fn provider_failure_stops_the_cycle_without_acting() {
         .expect("register");
     let echo = Echo::default();
     let executed = echo.calls.clone();
-    let mut lp =
-        CognitiveLoop::new(neutral_config(41), registry, NoEngine, NoEstimate, echo).expect("loop");
+    let mut lp = CognitiveLoop::new(
+        neutral_config(41),
+        registry,
+        NullEngine,
+        NullEstimator,
+        echo,
+    )
+    .expect("loop");
     let report = lp
         .run(&grasp_input(200))
         .expect("the loop itself must not fail");
@@ -181,8 +187,14 @@ fn disagreement_does_not_produce_an_action() {
         .expect("register");
     let echo = Echo::default();
     let executed = echo.calls.clone();
-    let mut lp =
-        CognitiveLoop::new(neutral_config(42), registry, NoEngine, NoEstimate, echo).expect("loop");
+    let mut lp = CognitiveLoop::new(
+        neutral_config(42),
+        registry,
+        NullEngine,
+        NullEstimator,
+        echo,
+    )
+    .expect("loop");
     let report = lp.run(&grasp_input(210)).expect("cycle");
     assert_eq!(
         executed.load(Ordering::SeqCst),
@@ -283,8 +295,8 @@ fn tampered_replay_record_is_detected() {
         CognitiveLoop::new(
             c.clone(),
             registry_answering("intellect", 0.95),
-            NoEngine,
-            NoEstimate,
+            NullEngine,
+            NullEstimator,
             Echo::default(),
         )
     };
