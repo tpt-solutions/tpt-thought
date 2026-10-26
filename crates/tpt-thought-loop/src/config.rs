@@ -5,6 +5,8 @@ use crate::modulation::Modulation;
 use serde::{Deserialize, Serialize};
 use tpt_thought_core::CognitiveBudget;
 use tpt_thought_deliberation::InvestigationPolicy;
+use tpt_thought_providers::DEFAULT_MIN_SAMPLES;
+use tpt_thought_safety::BreakerConfig;
 
 /// Settings for a [`crate::CognitiveLoop`]. Serialisable, so it can be recorded for replay.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -28,6 +30,23 @@ pub struct LoopConfig {
     pub budget: CognitiveBudget,
     /// Largest risk a chosen plan may carry.
     pub max_risk: f64,
+    /// Thresholds for the cognitive circuit breakers.
+    #[serde(default)]
+    pub breaker: BreakerConfig,
+    /// Observations a provider needs before its calibration is trusted.
+    #[serde(default = "default_min_samples")]
+    pub calibration_min_samples: u64,
+}
+
+fn default_min_samples() -> u64 {
+    DEFAULT_MIN_SAMPLES
+}
+
+impl Default for LoopConfig {
+    /// Seed `0` with a neutral modulatory state and the conventional settings of [`LoopConfig::new`].
+    fn default() -> Self {
+        Self::new(0, Modulation::neutral())
+    }
 }
 
 impl LoopConfig {
@@ -50,6 +69,8 @@ impl LoopConfig {
             ),
             budget: CognitiveBudget::default(),
             max_risk: 0.5,
+            breaker: BreakerConfig::default(),
+            calibration_min_samples: DEFAULT_MIN_SAMPLES,
         }
     }
 }

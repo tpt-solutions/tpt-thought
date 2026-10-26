@@ -4,10 +4,9 @@
 //! Run with `cargo run -p tpt-thought-loop --example closed_loop`.
 
 use tpt_thought_core::{Probability, StructuredValue, Timestamp};
-use tpt_thought_deliberation::DeliberationEngine;
 use tpt_thought_loop::{
-    replay, Action, ActionError, ActionSink, CandidatePlan, CognitiveLoop, CycleOutcome, Estimate,
-    Estimator, Input, LoopConfig, LoopError, Modulation, ReplayMetadata, ReplayRecord,
+    replay, Action, ActionError, ActionSink, CandidatePlan, CognitiveLoop, CycleOutcome, Input,
+    LoopConfig, LoopError, Modulation, NullEngine, NullEstimator, ReplayMetadata, ReplayRecord,
 };
 use tpt_thought_providers::{
     Locality, Privacy, ProviderProfile, ProviderRegistry, ReferenceProvider,
@@ -22,20 +21,6 @@ impl ActionSink for SimulatedArm {
     fn execute(&mut self, action: &Action) -> Result<StructuredValue, ActionError> {
         println!("  executor performs `{}`", action.name);
         Ok(action.expected.clone())
-    }
-}
-
-/// No deliberation engine: the loop does not need one when the first pass is accepted.
-struct NoEngine;
-
-impl DeliberationEngine for NoEngine {}
-
-/// No estimator: Augur is not needed on the fast path.
-struct NoEstimate;
-
-impl Estimator for NoEstimate {
-    fn estimate(&self, _question: &str) -> Option<Estimate> {
-        None
     }
 }
 
@@ -54,12 +39,12 @@ fn registry() -> ProviderRegistry {
 
 fn build(
     config: &LoopConfig,
-) -> Result<CognitiveLoop<NoEngine, NoEstimate, SimulatedArm>, LoopError> {
+) -> Result<CognitiveLoop<NullEngine, NullEstimator, SimulatedArm>, LoopError> {
     CognitiveLoop::new(
         config.clone(),
         registry(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         SimulatedArm,
     )
 }

@@ -5,12 +5,12 @@ use tpt_thought_core::{
     Confidence, Probability, StructuredValue, ThoughtState, Timestamp, TransitionKind, Uncertainty,
 };
 use tpt_thought_deliberation::mock::ScriptedEngine;
-use tpt_thought_deliberation::DeliberationEngine;
 use tpt_thought_deliberation::{InvestigationOutcome, InvestigationPolicy, Termination};
 use tpt_thought_loop::{
     replay, Action, ActionError, ActionSink, CandidatePlan, CognitiveLoop, CognitiveMode,
     CycleOutcome, CyclePhase, Estimate, Estimator, Input, LoopConfig, Modulation, ModulationError,
-    ModulationFields, ReplayError, ReplayMetadata, ReplayRecord, SlowStage,
+    ModulationFields, NullEngine, NullEstimator, ReplayError, ReplayMetadata, ReplayRecord,
+    SlowStage,
 };
 use tpt_thought_observatory::EventKind;
 use tpt_thought_prediction::ErrorLevel;
@@ -23,20 +23,6 @@ use tpt_thought_providers::{
 const QUESTION: &str = "can the gripper grasp?";
 
 // ---- Test doubles -------------------------------------------------------------------------------
-
-/// A deliberation engine that supports nothing, so Eve is skipped.
-struct NoEngine;
-
-impl DeliberationEngine for NoEngine {}
-
-/// An estimator with no opinion.
-struct NoEstimate;
-
-impl Estimator for NoEstimate {
-    fn estimate(&self, _question: &str) -> Option<Estimate> {
-        None
-    }
-}
 
 /// Estimator that always answers with the same estimate.
 struct Fixed(Estimate);
@@ -188,8 +174,8 @@ fn observe_think_act_learn_consolidate() {
     let mut lp = CognitiveLoop::new(
         neutral_config(7),
         intellect_knows_grasp(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");
@@ -246,8 +232,8 @@ fn mismatched_outcome_is_learned_from() {
     let mut lp = CognitiveLoop::new(
         neutral_config(7),
         intellect_knows_grasp(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Returns {
             value: StructuredValue::Text("dropped".into()),
         },
@@ -270,8 +256,8 @@ fn probabilistic_steps_are_flagged() {
     let mut lp = CognitiveLoop::new(
         neutral_config(7),
         intellect_knows_grasp(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");
@@ -309,8 +295,8 @@ fn human_provider_answers_as_a_provider() {
     let mut lp = CognitiveLoop::new(
         neutral_config(7),
         registry,
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");
@@ -331,8 +317,8 @@ fn unresolved_question_stops_without_acting() {
     let mut lp = CognitiveLoop::new(
         neutral_config(7),
         ProviderRegistry::new(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");
@@ -415,7 +401,7 @@ fn augur_estimate_reaches_intellect_reevaluation() {
     let mut lp = CognitiveLoop::new(
         neutral_config(7),
         registry,
-        NoEngine,
+        NullEngine,
         Fixed(Estimate {
             mean: 0.8,
             residual_uncertainty: 0.1,
@@ -519,8 +505,8 @@ fn surprise_raises_curiosity_when_novel() {
     let mut lp = CognitiveLoop::new(
         config,
         intellect_knows_grasp(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Returns {
             value: StructuredValue::Text("dropped".into()),
         },
@@ -540,8 +526,8 @@ fn no_surprise_means_no_curiosity() {
     let mut lp = CognitiveLoop::new(
         config,
         intellect_knows_grasp(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
     .expect("loop");
@@ -554,12 +540,12 @@ fn no_surprise_means_no_curiosity() {
 
 fn build(
     config: &LoopConfig,
-) -> Result<CognitiveLoop<NoEngine, NoEstimate, Echo>, tpt_thought_loop::LoopError> {
+) -> Result<CognitiveLoop<NullEngine, NullEstimator, Echo>, tpt_thought_loop::LoopError> {
     CognitiveLoop::new(
         config.clone(),
         intellect_knows_grasp(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default(),
     )
 }
@@ -622,8 +608,8 @@ fn bad_thresholds_are_rejected_at_construction() {
     assert!(CognitiveLoop::new(
         config,
         ProviderRegistry::new(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default()
     )
     .is_err());
@@ -636,9 +622,130 @@ fn accept_threshold_is_validated() {
     assert!(CognitiveLoop::new(
         config,
         ProviderRegistry::new(),
-        NoEngine,
-        NoEstimate,
+        NullEngine,
+        NullEstimator,
         Echo::default()
     )
     .is_err());
+}
+
+// ---- Policy gate -------------------------------------------------------------------------------
+
+/// A loop whose fast answer is rejected, so every run reaches the policy gate.
+fn escalating_loop(
+    policy: tpt_thought_policy::PolicySet,
+    estimate: Option<Estimate>,
+) -> CognitiveLoop<NullEngine, Fixed, Echo> {
+    let mut registry = ProviderRegistry::new();
+    registry
+        .register(NeedsEstimate {
+            id: ProviderId::new("intellect"),
+            profile: profile(),
+        })
+        .expect("register");
+    let estimator = Fixed(estimate.unwrap_or(Estimate {
+        mean: 0.8,
+        residual_uncertainty: 0.1,
+    }));
+    CognitiveLoop::new(
+        neutral_config(7),
+        registry,
+        NullEngine,
+        estimator,
+        Echo::default(),
+    )
+    .expect("loop")
+    .with_policy(policy)
+}
+
+fn policy_returning(decision: tpt_thought_policy::Decision) -> tpt_thought_policy::PolicySet {
+    let mut policy = tpt_thought_policy::PolicySet::new();
+    policy.push(move |_: &tpt_thought_policy::PolicyContext| decision);
+    policy
+}
+
+#[test]
+fn policy_termination_stops_before_the_slow_path() {
+    let policy = policy_returning(tpt_thought_policy::Decision::Terminate(
+        tpt_thought_policy::Termination::TooManyBranches {
+            branches: 9,
+            limit: 4,
+        },
+    ));
+    let mut lp = escalating_loop(policy, None);
+
+    let report = lp.run(&grasp_input(100)).expect("cycle");
+
+    assert!(report.slow_stages.is_empty(), "no slow stage may run");
+    assert!(
+        matches!(report.outcome, CycleOutcome::Unresolved { ref reason } if reason.contains("policy stopped"))
+    );
+    assert_eq!(lp.sink().calls, 0);
+}
+
+#[test]
+fn policy_accept_holds_the_uncertain_answer() {
+    let mut lp = escalating_loop(policy_returning(tpt_thought_policy::Decision::Accept), None);
+
+    let report = lp.run(&grasp_input(100)).expect("cycle");
+
+    assert!(report.slow_stages.is_empty());
+    assert!(
+        matches!(report.outcome, CycleOutcome::Unresolved { ref reason } if reason.contains("policy accepted"))
+    );
+    assert_eq!(lp.sink().calls, 0);
+}
+
+#[test]
+fn low_escalation_level_runs_only_intellect() {
+    let policy = policy_returning(tpt_thought_policy::Decision::Escalate(
+        tpt_thought_policy::EscalationLevel::StructuredIntelligence,
+    ));
+    let mut lp = escalating_loop(policy, None);
+
+    let report = lp.run(&grasp_input(100)).expect("cycle");
+
+    assert_eq!(
+        report.slow_stages,
+        [SlowStage::Intellect, SlowStage::IntellectReevaluation],
+        "L1 asks Intellect again without Augur or Eve"
+    );
+}
+
+#[test]
+fn probabilistic_level_adds_the_estimate_but_not_investigation() {
+    let policy = policy_returning(tpt_thought_policy::Decision::Escalate(
+        tpt_thought_policy::EscalationLevel::ProbabilisticInference,
+    ));
+    let mut lp = escalating_loop(policy, None);
+
+    let report = lp.run(&grasp_input(100)).expect("cycle");
+
+    assert_eq!(
+        report.slow_stages,
+        [
+            SlowStage::Intellect,
+            SlowStage::Augur,
+            SlowStage::IntellectReevaluation,
+        ],
+        "L3 adds the estimate; investigation needs L4"
+    );
+    assert!(matches!(report.outcome, CycleOutcome::Completed { .. }));
+}
+
+#[test]
+fn default_policy_runs_the_full_slow_path() {
+    let mut lp = escalating_loop(tpt_thought_loop::default_policy(), None);
+
+    let report = lp.run(&grasp_input(100)).expect("cycle");
+
+    assert_eq!(
+        report.slow_stages,
+        [
+            SlowStage::Intellect,
+            SlowStage::Augur,
+            SlowStage::IntellectReevaluation,
+        ],
+        "NullEngine skips Eve, but the full path is requested"
+    );
 }

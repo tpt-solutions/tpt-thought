@@ -15,23 +15,28 @@
 //! Intellect again with the estimate in context (spec section 61).
 
 mod action;
+mod builder;
 mod config;
 mod curiosity;
 mod cycle;
 mod mode;
 mod modulation;
+mod null;
 mod plan;
 mod replay;
 mod slow;
 
 pub use action::{Action, ActionError, ActionSink};
+pub use builder::LoopBuilder;
 pub use config::LoopConfig;
 pub use curiosity::{CuriosityDriver, CuriosityEvent, InvalidThreshold};
+pub use cycle::default_policy;
 pub use cycle::{
     CognitiveLoop, CycleOutcome, CyclePhase, CycleReport, Input, LoopError, TrajectoryStep,
 };
 pub use mode::CognitiveMode;
 pub use modulation::{Modulation, ModulationError, ModulationFields};
+pub use null::{NullActionSink, NullEngine, NullEstimator};
 pub use plan::{CandidatePlan, Plan, PlanError};
 pub use replay::{replay, ReplayError, ReplayMetadata, ReplayRecord};
 pub use slow::{Estimate, Estimator, SlowStage};

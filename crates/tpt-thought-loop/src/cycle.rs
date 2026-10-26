@@ -14,8 +14,12 @@ use crate::plan::{CandidatePlan, Plan, PlanError};
 use crate::slow::{Estimator, SlowStage};
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use tpt_thought_consolidation::{
+    ConsolidationConfig, ConsolidationPlan, Consolidator, IllegalPhaseTransition, Interrupt,
+    SleepBudget, SleepCycle, SleepReport, SystemPhase,
+};
 use tpt_thought_core::{
-    Confidence, Hypothesis, IdGenerator, Intention, IntentionId, MemoryRef, Observation,
+    Clock, Confidence, Hypothesis, IdGenerator, Intention, IntentionId, MemoryRef, Observation,
     Prediction, PredictionId, Probability, ProvenanceId, SeededEntropy, SourceTrust,
     StructuredValue, Thought, ThoughtContent, ThoughtId, ThoughtState, Timestamp, TransitionKind,
 };
@@ -28,17 +32,23 @@ use tpt_thought_intention::{
     require_capabilities, IntentionSet, IntentionStatus, InvalidIntention, ManagedIntention,
     SetError,
 };
-use tpt_thought_observatory::{EventKind, Observatory, RecordingSink, TelemetryEvent};
+use tpt_thought_observatory::{
+    EventKind, Observatory, RecordingSink, TelemetryEvent, TelemetrySink,
+};
+use tpt_thought_policy::{
+    Decision as PolicyDecision, EscalationLevel, PolicyContext, PolicySet, ResourceBudget,
+    ResourceUsage,
+};
 use tpt_thought_prediction::{
     ErrorLevel, MatchConfig, NotComparable, PredictionError, PredictionEvent, PredictionTracker,
     ResolveError, ResponseLadder,
 };
 use tpt_thought_provenance::{ProvenanceBody, ProvenanceSource, ProvenanceStore};
 use tpt_thought_providers::{
-    CalibrationTracker, CognitionMode, Decision, Deliberative, FastPath, IntelligenceRequest,
-    ProviderRegistry, Step, DEFAULT_MIN_SAMPLES,
+    CalibrationTracker, CognitionMode, Decision, Deliberative, Escalation, FastPath,
+    IntelligenceRequest, ProviderRegistry, Step,
 };
-use tpt_thought_safety::{BreakerConfig, CircuitBreakers, Trip};
+use tpt_thought_safety::{CircuitBreakers, Trip};
 use tpt_thought_state::{apply, IllegalTransition, ThoughtEvent, ThoughtLifecycle};
 use tpt_thought_workspace::{MemoryIndex, MemoryStore};
 
@@ -264,6 +274,19 @@ pub struct CognitiveLoop<E, A, S> {
     predictions: PredictionTracker,
     provenance: ProvenanceStore,
     trajectory: Vec<TrajectoryStep>,
+    telemetry: Option<Box<dyn TelemetrySink>>,
+    consolidator: Consolidator,
+    policy: PolicySet,
+}
+
+/// The policy every loop starts with: after a rejected fast answer, always run the full slow path.
+/// Build the loop with [`crate::LoopBuilder::policy`] to change that.
+pub fn default_policy() -> PolicySet {
+    let mut policy = PolicySet::new();
+    policy.push(|_: &PolicyContext| {
+        PolicyDecision::Escalate(EscalationLevel::MultiHypothesisInvestigation)
+    });
+    policy
 }
 
 /// The result of the slow path.
@@ -290,9 +313,9 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
             .map_err(|e| LoopError::Config(format!("accept_at: {e:?}")))?;
         Ok(Self {
             ids: IdGenerator::new(SeededEntropy::new(config.seed)),
-            calibration: CalibrationTracker::new(DEFAULT_MIN_SAMPLES),
+            calibration: CalibrationTracker::new(config.calibration_min_samples),
             observatory: Observatory::new(RecordingSink::new()),
-            breakers: CircuitBreakers::new(BreakerConfig::default()),
+            breakers: CircuitBreakers::new(config.breaker.clone()),
             intentions: IntentionSet::new(),
             fast: FastPath { accept_at },
             deliberative: Deliberative {
@@ -304,6 +327,9 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
             predictions: PredictionTracker::new(MatchConfig::default()),
             provenance: ProvenanceStore::new(),
             trajectory: Vec::new(),
+            telemetry: None,
+            consolidator: Consolidator::new(ConsolidationConfig::default()),
+            policy: default_policy(),
             config,
             registry,
             engine,
@@ -315,6 +341,54 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
     /// Use `store` for memory retrieval in every cycle. The default store holds nothing.
     pub fn with_memory(mut self, store: impl MemoryStore + 'static) -> Self {
         self.memory = Box::new(store);
+        self
+    }
+
+    /// The consolidator that sleep acts on. It starts empty; nothing feeds it automatically yet,
+    /// so callers record episodes into it with [`CognitiveLoop::consolidator_mut`].
+    pub fn consolidator(&self) -> &Consolidator {
+        &self.consolidator
+    }
+
+    /// The consolidator, mutably, for recording episodes, beliefs and calibration samples.
+    pub fn consolidator_mut(&mut self) -> &mut Consolidator {
+        &mut self.consolidator
+    }
+
+    /// Run a bounded, interruptible sleep cycle over the loop's consolidator (spec sections 28
+    /// and 86 to 89). The loop must be idle; the cycle begins from [`SystemPhase::Idle`].
+    ///
+    /// `interrupts` is asked before each step with the number of steps run so far, and an
+    /// interrupt at or above the budget's priority wakes the system. Steps are applied
+    /// atomically, so an interrupt never leaves the consolidator half-updated.
+    pub fn sleep(
+        &mut self,
+        budget: SleepBudget,
+        plan: &ConsolidationPlan,
+        clock: &dyn Clock,
+        interrupts: &mut dyn FnMut(usize) -> Option<Interrupt>,
+    ) -> Result<SleepReport, IllegalPhaseTransition> {
+        let cycle = SleepCycle::begin(SystemPhase::Idle, budget)?;
+        Ok(cycle.run(&mut self.consolidator, plan, clock, interrupts))
+    }
+
+    /// As [`CognitiveLoop::with_memory`], for a store already behind a box.
+    pub(crate) fn with_boxed_memory(mut self, store: Box<dyn MemoryStore>) -> Self {
+        self.memory = store;
+        self
+    }
+
+    /// Use `policy` to decide, after a rejected fast answer, whether to stop, accept the current
+    /// answer, or escalate to a level. See [`PolicyDecision`] for what each means here.
+    pub fn with_policy(mut self, policy: PolicySet) -> Self {
+        self.policy = policy;
+        self
+    }
+
+    /// Forward every telemetry event to `sink` as well as to the built-in recorder that backs
+    /// [`CognitiveLoop::observatory`]. Emitting never changes cognitive state.
+    pub fn with_telemetry(mut self, sink: impl TelemetrySink + 'static) -> Self {
+        self.telemetry = Some(Box::new(sink));
         self
     }
 
@@ -468,6 +542,12 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
                 .iter()
                 .map(|m| format!("memory:{}:{}", m.store, m.id)),
         );
+        let level = match mode {
+            CognitiveMode::Reactive | CognitiveMode::Emergency => {
+                EscalationLevel::StructuredIntelligence
+            }
+            _ => EscalationLevel::DeliberateReasoning,
+        };
         let step = match mode {
             CognitiveMode::Reactive | CognitiveMode::Emergency => {
                 self.fast
@@ -489,27 +569,55 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
                     TransitionKind::Probabilistic,
                     format!("escalated: {}", escalation.reason),
                 );
-                apply(&mut thought, ThoughtEvent::Investigate, at)?;
-                self.record(
-                    &thought,
-                    CyclePhase::Decide,
-                    mode,
-                    TransitionKind::Probabilistic,
-                    "investigating".into(),
-                );
-                let slow = self.slow_path(&thought, &request)?;
-                apply(&mut thought, ThoughtEvent::ReEvaluate, at)?;
-                self.record(
-                    &thought,
-                    CyclePhase::Decide,
-                    mode,
-                    TransitionKind::Probabilistic,
-                    format!("re-evaluating after {} slow stages", slow.stages.len()),
-                );
-                self.breakers
-                    .observe_escalation(slow.stages.len() as u32)
-                    .map_err(halted)?;
-                (slow.decision, slow.stages, slow.investigation)
+                let ctx = self.policy_context(level, &escalation);
+                match self.policy.decide(&ctx) {
+                    PolicyDecision::Escalate(target) => {
+                        apply(&mut thought, ThoughtEvent::Investigate, at)?;
+                        self.record(
+                            &thought,
+                            CyclePhase::Decide,
+                            mode,
+                            TransitionKind::Probabilistic,
+                            format!("investigating at {target}"),
+                        );
+                        let slow = self.slow_path(&thought, &request, target)?;
+                        apply(&mut thought, ThoughtEvent::ReEvaluate, at)?;
+                        self.record(
+                            &thought,
+                            CyclePhase::Decide,
+                            mode,
+                            TransitionKind::Probabilistic,
+                            format!("re-evaluating after {} slow stages", slow.stages.len()),
+                        );
+                        self.breakers
+                            .observe_escalation(slow.stages.len() as u32)
+                            .map_err(halted)?;
+                        (slow.decision, slow.stages, slow.investigation)
+                    }
+                    PolicyDecision::Accept => {
+                        let reason =
+                            "policy accepted the uncertain answer; no further cognition".to_owned();
+                        self.record(
+                            &thought,
+                            CyclePhase::Decide,
+                            mode,
+                            TransitionKind::Probabilistic,
+                            reason.clone(),
+                        );
+                        return Ok(unresolved(&thought, mode, &memories, reason));
+                    }
+                    PolicyDecision::Terminate(termination) => {
+                        let reason = format!("policy stopped cognition: {termination:?}");
+                        self.record(
+                            &thought,
+                            CyclePhase::Decide,
+                            mode,
+                            TransitionKind::Probabilistic,
+                            reason.clone(),
+                        );
+                        return Ok(unresolved(&thought, mode, &memories, reason));
+                    }
+                }
             }
         };
 
@@ -771,33 +879,42 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
     /// The slow path (spec section 61), in order: Intellect was already asked and escalated;
     /// Eve investigates; Augur estimates; Intellect is asked again with the estimate in context.
     /// Eve is recorded only if the engine supports investigation. Augur is always asked.
+    /// The slow stages a level allows. Intellect always runs. Investigation (Eve) needs level L4
+    /// or higher, and the estimate (Augur) needs L3 or higher.
     fn slow_path(
         &mut self,
         thought: &Thought,
         request: &IntelligenceRequest,
+        level: EscalationLevel,
     ) -> Result<SlowOutcome, LoopError> {
         let mut stages = vec![SlowStage::Intellect];
-        let ctx = DeliberationContext {
-            thought: ThoughtSnapshot::from_thought(thought),
-            budget: self.config.budget,
-        };
         let mut investigation = None;
-        match run_investigation(
-            &mut self.engine,
-            &ctx,
-            &request.question,
-            &self.config.investigation,
-        ) {
-            Ok(run) => {
-                stages.push(SlowStage::Eve);
-                investigation = Some(run.termination);
+        if level >= EscalationLevel::DeliberateReasoning {
+            let ctx = DeliberationContext {
+                thought: ThoughtSnapshot::from_thought(thought),
+                budget: self.config.budget,
+            };
+            match run_investigation(
+                &mut self.engine,
+                &ctx,
+                &request.question,
+                &self.config.investigation,
+            ) {
+                Ok(run) => {
+                    stages.push(SlowStage::Eve);
+                    investigation = Some(run.termination);
+                }
+                Err(DeliberationError::Unsupported(_)) => {}
+                Err(error) => return Err(error.into()),
             }
-            Err(DeliberationError::Unsupported(_)) => {}
-            Err(error) => return Err(error.into()),
         }
 
-        let estimate = self.estimator.estimate(&request.question);
-        stages.push(SlowStage::Augur);
+        let estimate = if level >= EscalationLevel::ProbabilisticInference {
+            stages.push(SlowStage::Augur);
+            self.estimator.estimate(&request.question)
+        } else {
+            None
+        };
 
         let mut reevaluation = request.clone();
         if let Some(estimate) = estimate {
@@ -820,6 +937,27 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
             stages,
             investigation,
         })
+    }
+
+    /// The policy's view of an escalation. Risk, branches and value are not known at this point
+    /// in the cycle, so they are zero or absent, and a policy must not treat them as measured.
+    fn policy_context(&self, level: EscalationLevel, escalation: &Escalation) -> PolicyContext {
+        let confidence = escalation
+            .decisions
+            .iter()
+            .filter_map(|d| d.confidence.best())
+            .map(|p| p.get())
+            .fold(0.0, f64::max);
+        PolicyContext {
+            level,
+            confidence,
+            risk: 0.0,
+            branches: 0,
+            failed_escalations: 0,
+            value: None,
+            usage: ResourceUsage::default(),
+            budget: ResourceBudget::from(self.config.budget),
+        }
     }
 
     fn record(
@@ -846,6 +984,9 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
             .for_thought(thought.id)
             .with_state(thought.state);
         self.observatory.emit(&event);
+        if let Some(sink) = self.telemetry.as_mut() {
+            sink.emit(&event);
+        }
     }
 
     /// Store `body` as a provenance record and attach its id to the thought's `records`.
@@ -865,6 +1006,27 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
     }
 }
 
+/// The report for a cycle that ended without an answer before any slow stage ran.
+fn unresolved(
+    thought: &Thought,
+    mode: CognitiveMode,
+    memories: &[MemoryRef],
+    reason: String,
+) -> CycleReport {
+    CycleReport {
+        thought: thought.id,
+        mode,
+        outcome: CycleOutcome::Unresolved { reason },
+        slow_stages: Vec::new(),
+        investigation: None,
+        curiosity: None,
+        hypotheses: thought.hypotheses.len(),
+        memories: memories.to_vec(),
+        prediction: None,
+        provenance: thought.provenance.records.clone(),
+    }
+}
+
 fn halted(trip: Trip) -> LoopError {
     LoopError::Halted(format!("{trip:?}"))
 }
@@ -872,10 +1034,47 @@ fn halted(trip: Trip) -> LoopError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tpt_thought_consolidation::SleepOutcome;
 
     #[test]
     fn errors_have_readable_messages() {
         let e = LoopError::Halted("loop".into());
         assert!(e.to_string().contains("halted"));
+    }
+
+    fn budget() -> SleepBudget {
+        SleepBudget {
+            max_steps: 100,
+            max_duration_nanos: i64::MAX,
+            wake_priority: 0.9,
+        }
+    }
+
+    #[test]
+    fn idle_loop_completes_a_standard_sleep_cycle() {
+        let mut lp = CognitiveLoop::builder().build().expect("default loop");
+        let clock = tpt_thought_core::ManualClock::new(Timestamp(0));
+        let plan = ConsolidationPlan::standard();
+        let report = lp
+            .sleep(budget(), &plan, &clock, &mut |_| None)
+            .expect("sleep from idle");
+        assert!(matches!(report.outcome, SleepOutcome::Completed { .. }));
+    }
+
+    #[test]
+    fn high_priority_interrupt_wakes_the_loop() {
+        let mut lp = CognitiveLoop::builder().build().expect("default loop");
+        let clock = tpt_thought_core::ManualClock::new(Timestamp(0));
+        let plan = ConsolidationPlan::standard();
+        let mut wake = |_: usize| {
+            Some(Interrupt {
+                priority: 1.0,
+                reason: "user input".into(),
+            })
+        };
+        let report = lp
+            .sleep(budget(), &plan, &clock, &mut wake)
+            .expect("sleep from idle");
+        assert!(matches!(report.outcome, SleepOutcome::Interrupted { .. }));
     }
 }
