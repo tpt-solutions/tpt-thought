@@ -7,10 +7,36 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::sync::Mutex;
 
+/// Error returned when an entropy source cannot supply random bytes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EntropyError;
+
+impl fmt::Display for EntropyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("entropy source unavailable")
+    }
+}
+
+impl std::error::Error for EntropyError {}
+
 /// A source of random bytes. Production code should use [`OsEntropy`]; tests may use
 /// [`SeededEntropy`] for reproducible IDs.
 pub trait EntropySource: Send {
+    /// Fill `buf` with random bytes, reporting failure instead of panicking.
+    ///
+    /// The default implementation calls [`fill`](Self::fill) and never fails. Sources that can
+    /// fail (such as the operating system) should override it.
+    fn try_fill(&mut self, buf: &mut [u8]) -> Result<(), EntropyError> {
+        self.fill(buf);
+        Ok(())
+    }
+
     /// Fill `buf` with random bytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the source cannot supply bytes. Use [`try_fill`](Self::try_fill) to handle
+    /// that case.
     fn fill(&mut self, buf: &mut [u8]);
 }
 
@@ -21,8 +47,13 @@ pub struct OsEntropy;
 
 #[cfg(feature = "os-entropy")]
 impl EntropySource for OsEntropy {
+    fn try_fill(&mut self, buf: &mut [u8]) -> Result<(), EntropyError> {
+        getrandom::fill(buf).map_err(|_| EntropyError)
+    }
+
     fn fill(&mut self, buf: &mut [u8]) {
-        getrandom::fill(buf).expect("operating system entropy source unavailable");
+        self.try_fill(buf)
+            .expect("operating system entropy source unavailable");
     }
 }
 
@@ -302,5 +333,35 @@ mod tests {
     fn os_entropy_unique() {
         let g = IdGenerator::os();
         assert_ne!(g.thought(), g.thought());
+    }
+
+    struct FailingEntropy;
+
+    impl EntropySource for FailingEntropy {
+        fn try_fill(&mut self, _buf: &mut [u8]) -> Result<(), EntropyError> {
+            Err(EntropyError)
+        }
+
+        fn fill(&mut self, _buf: &mut [u8]) {
+            panic!("fill must not be reached through try_fill");
+        }
+    }
+
+    #[test]
+    fn try_fill_reports_source_failure() {
+        let mut buf = [0u8; 16];
+        assert_eq!(FailingEntropy.try_fill(&mut buf), Err(EntropyError));
+    }
+
+    #[test]
+    fn default_try_fill_matches_fill() {
+        let mut via_fill = SeededEntropy::new(7);
+        let mut via_try = SeededEntropy::new(7);
+        let (mut a, mut b) = ([0u8; 32], [0u8; 32]);
+        via_fill.fill(&mut a);
+        via_try
+            .try_fill(&mut b)
+            .expect("seeded entropy never fails");
+        assert_eq!(a, b);
     }
 }
