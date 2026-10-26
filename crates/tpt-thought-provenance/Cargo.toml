@@ -1,13 +1,15 @@
 [package]
 name = "tpt-thought-provenance"
 description = "Machine-readable, hash-linked cognitive provenance for TPT Thought"
+keywords = ["provenance", "audit", "sha256", "explainability", "hash-chain"]
+categories = ["science", "cryptography"]
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
 
 [dependencies]
 tpt-thought-core = { workspace = true }

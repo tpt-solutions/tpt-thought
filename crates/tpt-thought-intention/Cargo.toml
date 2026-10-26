@@ -1,13 +1,15 @@
 [package]
 name = "tpt-thought-intention"
 description = "TPT Thought intentions: goals, constraints, priority, deadlines and their lifecycle"
+keywords = ["cognition", "goals", "intentions", "lifecycle", "agents"]
+categories = ["data-structures", "rust-patterns"]
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
 
 [dependencies]
 tpt-thought-core = { workspace = true }

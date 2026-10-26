@@ -1,13 +1,15 @@
 [package]
 name = "tpt-thought-workspace"
-description = "TPT Thought: tpt-thought-workspace (see todo.md)"
+description = "TPT Thought: global workspace references, episodic records and the thought bubble"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
+keywords = ["cognition", "global-workspace", "memory", "agents", "episodic"]
+categories = ["data-structures", "rust-patterns"]
 
 [dependencies]
 tpt-thought-core = { workspace = true }

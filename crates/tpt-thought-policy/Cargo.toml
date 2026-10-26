@@ -1,13 +1,15 @@
 [package]
 name = "tpt-thought-policy"
-description = "TPT Thought: tpt-thought-policy (see todo.md)"
+description = "TPT Thought: escalation, branching, resource and termination policies"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
+keywords = ["cognition", "escalation", "policy", "budget", "agents"]
+categories = ["algorithms", "rust-patterns"]
 
 [dependencies]
 tpt-thought-core = { workspace = true }

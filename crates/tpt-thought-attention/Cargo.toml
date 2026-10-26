@@ -1,13 +1,15 @@
 [package]
 name = "tpt-thought-attention"
 description = "TPT Thought attention: multi-factor scoring, cognitive demand and working memory"
+keywords = ["attention", "working-memory", "scheduling", "cognition", "salience"]
+categories = ["science", "algorithms"]
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
 
 [dependencies]
 tpt-thought-core = { workspace = true }

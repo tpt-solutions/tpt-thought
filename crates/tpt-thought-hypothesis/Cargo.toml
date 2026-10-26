@@ -1,13 +1,15 @@
 [package]
 name = "tpt-thought-hypothesis"
-description = "TPT Thought: tpt-thought-hypothesis (see todo.md)"
+description = "TPT Thought: branching hypotheses, collapse, contradictions and the belief promotion pipeline"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
+keywords = ["hypothesis", "belief", "reasoning", "contradiction", "information-gain"]
+categories = ["science", "algorithms"]
 
 [dependencies]
 tpt-thought-core = { workspace = true }
