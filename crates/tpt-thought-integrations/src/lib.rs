@@ -55,5 +55,7 @@ pub mod local;
 pub mod pulse;
 #[cfg(feature = "remote")]
 pub mod remote;
+#[cfg(feature = "anima")]
+pub mod share;
 #[cfg(feature = "zkpa")]
 pub mod zkpa;
