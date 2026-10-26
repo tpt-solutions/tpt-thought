@@ -1,13 +1,15 @@
 [package]
 name = "tpt-thought-integrations"
 description = "TPT Thought adapters for the sibling TPT repositories (Intellect, Eve, Anima, Augur). The only crate that depends on sibling repositories."
+keywords = ["cognition", "adapters", "intellect", "interop", "agents"]
+categories = ["science", "development-tools"]
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+readme = "README.md"
 
 [features]
 default = []
@@ -41,9 +43,9 @@ tpt-eve-active-learning = { git = "https://github.com/TPT-Solutions/tpt-eve", re
 tpt-anima-sse = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "408c2e0065ba99e619fa7277d3801e0c9abad0ff", version = "0.1.0", optional = true }
 tpt-anima-inp = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "408c2e0065ba99e619fa7277d3801e0c9abad0ff", version = "0.1.0", optional = true }
 tpt-anima-ck = { git = "https://github.com/TPT-Solutions/tpt-anima", rev = "408c2e0065ba99e619fa7277d3801e0c9abad0ff", version = "0.1.0", optional = true }
-tpt-augur-frontend = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "634f67a5ed632f9bba082cafeeb921c22dc18195", version = "0.1.0", optional = true }
-tpt-augur-ir = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "634f67a5ed632f9bba082cafeeb921c22dc18195", version = "0.1.0", optional = true }
-tpt-augur-runtime = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "634f67a5ed632f9bba082cafeeb921c22dc18195", version = "0.1.0", optional = true }
+tpt-augur-frontend = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "c29ecd1781f9f2b8d04b971329340c44349fcbfb", version = "0.1.0", optional = true }
+tpt-augur-ir = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "c29ecd1781f9f2b8d04b971329340c44349fcbfb", version = "0.1.0", optional = true }
+tpt-augur-runtime = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = "c29ecd1781f9f2b8d04b971329340c44349fcbfb", version = "0.1.0", optional = true }
 tpt-axiom-core = { git = "https://github.com/tpt-solutions/tpt-axiom", rev = "42c495f7751db5acc3c571bb890da41a153f75ba", version = "0.1.0", optional = true }
 tpt-intellect-remote = { git = "https://github.com/TPT-Solutions/tpt-intellect", rev = "a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc", version = "0.1.0", features = ["serde"], optional = true }
 # tpt-infer has no revision pin in tpt-intellect-remote's manifest, so this uses the same

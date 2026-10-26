@@ -11,7 +11,7 @@
 //! | `intellect` | `tpt-intellect` `a502c013` | `intellect::IntellectProvider` | `IntelligenceProvider` |
 //! | `eve` | `tpt-eve` `c230d0e8` | `eve::EveAdapter` | `DeliberationEngine` |
 //! | `anima` | `tpt-anima` `408c2e00` | `anima::AnimaMemory`, `anima::AnimaBudget`, `anima::AnimaBroadcast` | `MemoryStore`, budget signal, intention broadcast, `SleepScheduler` (throttle factor above 0.75 and flops remaining) |
-//! | `augur` | `tpt-augur` `634f67a5` | `augur::AugurAdapter` | posterior records with residual uncertainty |
+//! | `augur` | `tpt-augur` `c29ecd17` | `augur::AugurAdapter`, `augur::AugurSession` | posterior records with residual uncertainty, possible states for discrete parameters, and evidence updates |
 //! | `axiom` | `tpt-axiom` `42c495f7` | `axiom::probability`, `axiom::confidence`, `axiom::uncertainty` | `Probability`, `Confidence`, `Uncertainty` (fuzzy variance as epistemic) |
 //! | `remote` | `tpt-intellect` `a502c013` (`tpt-intellect-remote`, serde) | `remote::loopback`, `remote::over_transport` | `IntelligenceProvider` |
 //! | `local` | `remote` + `tpt-infer` (unpinned in its own manifest; `Cargo.lock` pins it) | `local::LocalClassifier` | `IntelligenceProvider` |
@@ -36,8 +36,8 @@
 //!   it is not used. Contradiction analysis reports `Unsupported`: `tpt-eve-symbolic` depends on
 //!   `dirs`, which pulls in `option-ext` (MPL-2.0), outside the permissive licence policy. Query
 //!   ranking reports `Unsupported` too. Interventions and counterfactuals map to `tpt-eve-causal`.
-//! - **Augur gaps**: there is no evidence-update or residual-uncertainty API. Residual
-//!   uncertainty is derived from the posterior summaries only.
+//! - **Augur**: the pinned revision provides evidence sessions and residual uncertainty, so
+//!   `AugurSession` builds with the `augur` feature.
 
 #[cfg(feature = "anima")]
 pub mod anima;
