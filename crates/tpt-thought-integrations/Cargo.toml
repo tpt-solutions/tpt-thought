@@ -29,6 +29,7 @@ tpt-thought-providers = { workspace = true }
 tpt-thought-deliberation = { workspace = true }
 tpt-thought-workspace = { workspace = true }
 tpt-thought-consolidation = { workspace = true, optional = true }
+# The `ActionSink` port that `anima::AnimaActionSink` implements.
 tpt-thought-loop = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
