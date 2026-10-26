@@ -44,8 +44,18 @@ Escalation levels, lowest first:
 | L5 | Multi-hypothesis investigation | Competing hypotheses investigated in turn. |
 | L6 | Human | Escalate to a human provider. |
 
-Escalation happens when the expected value of further cognition exceeds its cost, and the
-budget allows it. Termination takes precedence over escalation, and escalation over acceptance.
+When the fast or deliberative path does not accept its answer, the loop asks its policy set what
+to do. The policy decides and the loop executes:
+
+- `Escalate(level)` runs the slow stages that level allows. Intellect always runs. Eve
+  (investigation) needs L4 or higher, and Augur (the estimate) needs L3 or higher.
+- `Accept` ends the cycle without further cognition, and the cycle is reported as unresolved.
+- `Terminate` ends the cycle the same way, with the termination reason in the report.
+
+The default policy escalates to L5 on every rejected answer, which is the full slow path. The
+policy's context carries the best confidence among the rejected answers and the level. Risk, branch
+count and value are zero or absent at this point, because they are not known until a plan is made.
+`Termination` takes precedence over escalation in the policy crate's `Decision::combine`.
 
 ## Beliefs
 

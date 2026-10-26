@@ -28,7 +28,7 @@ Ground rules (apply to every phase)
 - [x] `README.md` (what Thought is, and what it is not, §1)
 - [x] `CONTRIBUTING.md` (contributions licensed MIT OR Apache-2.0)
 - [x] `docs/` skeleton: ARCHITECTURE, COGNITIVE_MODEL, INTEGRATION_ANIMA, INTEGRATION_EVE, INTEGRATION_INTELLECT, PROVIDERS, BENCHMARKS
-- [x] `examples/` and `benches/` directories
+- [x] `examples/` and `benches/` directories (the top-level placeholders were removed in Phase 13; real examples and benches live in their crates)
 - [x] Facade crate `tpt-thought` re-exporting public API
 - [x] Dependency policy doc: what core may and may not depend on
 
@@ -220,7 +220,7 @@ Ground rules (apply to every phase)
 - [x] Human provider (`HumanProvider` returning `Decision<T>`, source = human, §92)
 - [x] Remote provider via `tpt-intellect-remote` only (no HTTP in Thought, §93)
 - [ ] Local provider support via Intellect (tpt-infer, tpt-spark, Ollama) without knowing internals (§94)
-- [ ] `AugurAdapter`: states, posteriors, evidence updates, residual uncertainty (§49)
+- [x] `AugurAdapter`: states, posteriors, evidence updates, residual uncertainty (§49). Discrete states come from the posterior draws (`augur::states_of`); evidence updates and residuals are in `AugurSession`.
 - [ ] `AxiomAdapter`: uncertainty types, validated values, formal constraints, verification markers (§50)
 - [ ] `PulseAdapter`: cognitive event stream (§53, §116)
 - [ ] Multi-agent thought sharing: broadcast, independent evaluation, ensemble merge via INP (§39)
@@ -293,6 +293,46 @@ Release
 
 ---
 
+## Phase 13 — Hygiene, Augur API, Usability & Tooling (post-review)
+Fix what is broken or stale
+- [x] CI: `if: ${{ secrets.TPT_GIT_TOKEN != '' }}` is invalid; pass the secret via `env:` and test that
+- [x] Replace the 7 placeholder crate descriptions ("see todo.md") in consolidation, hypothesis, policy, prediction, providers, safety, workspace
+- [x] Fix stale docs: DEPENDENCY_POLICY (siblings are in the build), BENCHMARKS (integrations not on hold), THREAT_MODEL (fuzzing exists), COGNITIVE_MODEL (loop wiring claims)
+- [x] ARCHITECTURE.md: add a one-cycle sequence diagram
+- [x] Remove empty `examples/.gitkeep` and `benches/.gitkeep` once real content exists
+- [x] `OsEntropy::fill` (`core/src/id.rs`): fallible path instead of `.expect`, keep infallible wrapper
+- [x] `reflection/src/engine.rs`: stop swallowing `session.complete()` error
+- [x] Check `RecordingSink` for unbounded growth; add a cap
+- [ ] Cut `v0.1.1` (the `v0.1.0` tag predates later commits) and update CHANGELOG
+
+Augur API (in `tpt-augur`, then the adapter here)
+- [x] `tpt-augur-runtime`: `Session` with `observe` (evidence update) and `infer`, deterministic re-runs (tpt-augur `c29ecd17`)
+- [x] `tpt-augur-runtime`: `Residual` type (sd, 95% interval width, converged, relative uncertainty) and `residual_of` (tpt-augur `c29ecd17`)
+- [x] Augur tests (conjugate update after 1 then 3 observations, sd shrinks, determinism), docs/API.md, CHANGELOG, TODO
+- [x] `AugurSession` in `tpt-thought-integrations`; map `Residual` to Thought `Uncertainty`
+- [x] Bump the three Augur `rev` pins; update INTEGRATION_AUGUR.md and drop the "Not provided" notes
+
+Make the loop easy to use
+- [x] `impl Default for LoopConfig`
+- [x] Public `NullEngine` and `NullEstimator`; remove the four copy-pasted versions
+- [x] `LoopBuilder` with sane defaults
+- [x] Injectable telemetry sink; configurable `BreakerConfig` and calibration min-samples
+- [x] Wire `policy` escalation (L0-L6) into path selection and expose `sleep` on the loop; document anything left to compose
+- [x] Facade: `prelude`, feature forwarding to integrations, re-export `integrations`
+
+Tooling, docs, examples
+- [x] `tpt-thought-cli` crate: `run`, `replay`, `why`, `validate`, `schema`, `demo`
+- [x] Examples: quickstart, hypotheses, reflection_and_sleep, custom_provider, augur_evidence
+- [x] Docs: QUICKSTART.md, CLI.md, COOKBOOK.md; README quickstart block
+- [x] Bench regeneration script that updates BENCHMARKS.md
+
+Repo hygiene
+- [x] CONTRIBUTING.md: issues only, no pull requests
+- [x] Issue templates (bug, feature, integration-gap) and config.yml
+- [x] `scripts/check.ps1` and `check.sh` (fmt, clippy, test, deny)
+
+---
+
 ## Deferred / Future (not v1)
 - [ ] Dreams / idle (offline) cognition mode (§78)
 - [ ] MessagePack and custom binary serialization (§72)
@@ -317,6 +357,6 @@ Models · databases · LLM clients · tensor ops · probability maths · formal 
 - **Golden scenario against real siblings**: written, but two properties are ignored. The real Intellect answers at full confidence on the first pass, so the Eve, Augur and re-evaluation stages never run. The Eve adapter has no investigation step to report.
 - **Pulse**: no event stream exists in `tpt-pulse`, only synchronous session-typed channels.
 - **Anima**: no `retrieve_context`, episode persistence, global workspace or ZKPA identity type. The broadcast adapter covers provider discovery only.
-- **Augur**: no evidence-update or residual-uncertainty API. Residual uncertainty is derived from posterior summaries.
 - **Observatory UI**: belongs to Anima Observatory, out of scope for Thought.
 - **Release tag `v0.1.0`**: exists locally (commit `220fc9b`); the later commits are not covered by it.
+- **Consolidator input (Phase 13)**: the loop owns a consolidator and exposes `sleep()`, but nothing feeds it episodes, beliefs or calibration samples automatically. Callers record them with `consolidator_mut()`.

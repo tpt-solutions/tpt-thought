@@ -17,13 +17,18 @@ Read `docs/DEPENDENCY_POLICY.md` before adding a dependency or a crate. In short
 - Libraries are runtime-agnostic: no tokio, native `async fn` in traits.
 - Dependencies must be MIT-compatible. Apache-2.0-only crates are rejected by `cargo deny`.
 
-## Before opening a PR
+## Reporting issues
+
+This project accepts **issues only, not pull requests**. Please open an issue using one of the
+templates (bug, feature request or integration gap). Pull requests are closed without review.
+
+Before reporting a bug, run the same checks CI runs. From the repository root:
 
 ```
-cargo fmt --all
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-cargo deny check
+scripts/check.ps1     # Windows (PowerShell)
+scripts/check.sh      # Linux and macOS
 ```
+
+Both run `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test` and `cargo deny check`.
 
 Source files start with `// SPDX-License-Identifier: MIT OR Apache-2.0`. Unsafe code is forbidden.

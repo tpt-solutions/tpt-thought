@@ -29,4 +29,5 @@ Residual risks and out-of-scope items
   belongs to the integration layer.
 - Resource limits bound the work Thought schedules. Anima CK enforces the actual CPU and memory.
 - Breaker thresholds are defaults. They must be tuned per deployment and measured (spec section 96).
-- Fuzzing of serialization decoders is tracked separately in `todo.md` (Phase 12).
+- Decoder fuzzing is property-based (`crates/tpt-thought-tests/tests/fuzz_decoders.rs`, proptest),
+  not coverage-guided. It checks that arbitrary input never panics, not that every path is reached.

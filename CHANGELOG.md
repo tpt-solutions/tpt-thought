@@ -51,6 +51,23 @@ All notable changes to this project are recorded here. The format follows
   `docs/INTEGRATION_EVE.md`.
 - Integration documents for Augur and Axiom, and `docs/DEPENDENCY_POLICY.md` now covers the
   git-source policy for sibling repositories.
+- `tpt-thought-cli`: the `thought` command, with `demo`, `run`, `replay`, `validate`, `why` and
+  `schema`. Records and replays runs as JSON and explains a cycle's provenance. See `docs/CLI.md`.
+- Examples in `tpt-thought`: `quickstart`, `hypotheses`, `reflection_and_sleep`,
+  `custom_provider`, and `augur_evidence` (behind the `augur` feature).
+- Documentation: `docs/QUICKSTART.md`, `docs/CLI.md` and `docs/COOKBOOK.md`, and a one-cycle
+  sequence diagram in `docs/ARCHITECTURE.md`.
+- `tpt-thought-loop`: `LoopBuilder` (`CognitiveLoop::builder()`), public `NullEngine`,
+  `NullEstimator` and `NullActionSink`, `with_telemetry`, and `sleep()` with `consolidator()`.
+- Escalation policy in the loop: a `PolicySet` decides, after a rejected answer, whether to stop,
+  accept or escalate to a level. The level selects the slow stages. The default escalates to L5.
+- `tpt-thought` facade: a `prelude` module, feature forwarding to `tpt-thought-integrations`, and
+  the `integrations` re-export.
+- `scripts/check.sh`, `scripts/check.ps1`, `scripts/bench.sh` and `scripts/bench.ps1`.
+- Issue templates (bug, feature request, integration gap). `CONTRIBUTING.md` accepts issues only.
+- `tpt-thought-integrations` (`augur` feature): `AugurSession` for evidence updates and
+  `uncertainty_of`, which maps a residual to Thought's `Uncertainty`. Pinned to `tpt-augur`
+  `c29ecd17`.
 
 ### Changed
 
@@ -73,7 +90,6 @@ All notable changes to this project are recorded here. The format follows
 - Eve query ranking, and any Eve deliberation entry point (`reason`, `investigate`).
 - Pulse adapter: `tpt-pulse` has no event stream.
 - Anima: `retrieve_context`, episode persistence, a global workspace and a ZKPA identity type.
-- Augur evidence updates and a residual-uncertainty API.
 - Axiom formal constraints and ZK verification markers.
 - Ollama and `tpt-spark` adapters.
 - Observatory UI, which belongs to Anima's Observatory.

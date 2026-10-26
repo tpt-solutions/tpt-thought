@@ -42,8 +42,9 @@ If a sibling becomes private, set the `TPT_GIT_TOKEN` repository secret to a fin
 with read-only contents access. The CI step then rewrites GitHub URLs for that organisation to use
 it. The step is skipped when the secret is absent.
 
-## Sibling dependencies on hold
+## Sibling dependencies
 
-Sibling dependencies are not yet in the build. See `INTEGRATION_*.md`. Before any sibling
-dependency is added, its licence and its async runtime requirements must be checked against this
-policy.
+Sibling dependencies are in the build, but only inside `tpt-thought-integrations`, and each one is
+behind its own feature, so a default build fetches none of them. The facade crate forwards those
+features. See `INTEGRATION_*.md` for what each adapter covers. Before any sibling dependency is
+added, its licence and its async runtime requirements must be checked against this policy.

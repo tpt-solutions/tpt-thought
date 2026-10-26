@@ -47,6 +47,42 @@ the `INTEGRATION_*` documents for what each adapter covers and what is not yet m
 - No library crate depends on an async runtime. Tokio is denied in `deny.toml`.
 - Nothing is branched on a specific backend. Everything goes through provider traits.
 
+## One cycle
+
+`CognitiveLoop::run` takes one `Input` through the eleven phases below. The caller supplies the
+providers, the deliberation engine, the estimator, the executor and the memory store. Thought
+calls them and never acts on its own.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Caller
+    participant Loop as CognitiveLoop
+    participant Mem as MemoryStore
+    participant Prov as Providers (fast or deliberative)
+    participant Slow as Engine, Estimator, Intellect
+    participant Exec as ActionSink
+
+    Caller->>Loop: run(Input)
+    Loop->>Loop: observe, contextualise
+    Loop->>Mem: retrieve(cue, limit)
+    Mem-->>Loop: memory references
+    Loop->>Loop: associate, hypothesise
+    Loop->>Prov: evaluate and decide (mode from modulation)
+    alt accepted
+        Prov-->>Loop: Decision
+    else escalated
+        Loop->>Slow: Intellect, Eve, Augur, Intellect again
+        Slow-->>Loop: Decision or abstention
+    end
+    Loop->>Loop: intend (plan, risk check)
+    Loop->>Exec: execute(Action)
+    Exec-->>Loop: actual outcome
+    Loop->>Loop: observe result, learn (prediction error)
+    Loop->>Loop: consolidate (provenance, trajectory)
+    Loop-->>Caller: CycleReport
+```
+
 ## Principles
 
 - Never branch on a specific backend; go through provider traits.
