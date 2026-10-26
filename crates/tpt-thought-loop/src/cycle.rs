@@ -15,8 +15,9 @@ use crate::slow::{Estimator, SlowStage};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use tpt_thought_consolidation::{
-    ConsolidationConfig, ConsolidationPlan, Consolidator, IllegalPhaseTransition, Interrupt,
-    SleepBudget, SleepCycle, SleepReport, SystemPhase,
+    persist, ConsolidationConfig, ConsolidationPlan, ConsolidationSink, Consolidator,
+    IllegalPhaseTransition, Interrupt, PersistedConsolidation, SleepBudget, SleepCycle,
+    SleepReport, SystemPhase,
 };
 use tpt_thought_core::{
     Clock, Confidence, Hypothesis, IdGenerator, Intention, IntentionId, MemoryRef, Observation,
@@ -382,6 +383,16 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
     ) -> Result<SleepReport, IllegalPhaseTransition> {
         let cycle = SleepCycle::begin(SystemPhase::Idle, budget)?;
         Ok(cycle.run(&mut self.consolidator, plan, clock, interrupts))
+    }
+
+    /// Write the durable output of the loop's consolidator through `sink` (todo Phase 6). The
+    /// sink decides where it is held; the loop only sees the trait, and gets back references.
+    /// Calling it again after a sleep cycle stores nothing twice, because the sink is idempotent.
+    pub fn persist_consolidation<K: ConsolidationSink>(
+        &self,
+        sink: &mut K,
+    ) -> Result<PersistedConsolidation, K::Error> {
+        persist(&self.consolidator, sink)
     }
 
     /// As [`CognitiveLoop::with_memory`], for a store already behind a box.
