@@ -3,9 +3,13 @@
 //! the real Eve adapter. Only compiled with the `real-adapters` feature.
 //!
 //! Anima's memory and the executor stay as in `golden.rs`, and Augur stays a fixed estimate: no
-//! real Augur adapter is wired into this scenario. The two properties of the mock scenario that
-//! depend on Intellect abstaining and on Eve investigating cannot hold with the real adapters.
-//! They are kept as ignored tests with the reason, so they are not silently weakened.
+//! real Augur adapter is wired into this scenario.
+//!
+//! The single-candidate scenario is answered at full confidence by the real Intellect on the
+//! first pass, so it never escalates. The escalation tests therefore offer Intellect a second
+//! candidate. The reference backend's choice confidence is the chosen candidate's share of the
+//! distribution, so the answer is honestly below `accept_at` and the slow path runs. Eve has no
+//! facts about the object, so its investigation reports that it needs a human.
 
 #![cfg(feature = "real-adapters")]
 
@@ -13,7 +17,7 @@ mod common;
 
 use common::*;
 use tpt_thought_core::{MemoryRef, StructuredValue, Timestamp};
-use tpt_thought_deliberation::InvestigationPolicy;
+use tpt_thought_deliberation::{InvestigationPolicy, Termination};
 use tpt_thought_integrations::eve::EveAdapter;
 use tpt_thought_integrations::intellect::reference_provider;
 use tpt_thought_loop::{
@@ -29,6 +33,19 @@ fn registry() -> ProviderRegistry {
     let mut registry = ProviderRegistry::new();
     registry
         .register(reference_provider(vec!["grasp".into()], profile()))
+        .expect("register");
+    registry
+}
+
+/// The reference provider offered a second candidate, so its first-pass choice confidence is
+/// the share of the chosen candidate, below full confidence.
+fn hesitant_registry() -> ProviderRegistry {
+    let mut registry = ProviderRegistry::new();
+    registry
+        .register(reference_provider(
+            vec!["grasp".into(), "push".into()],
+            profile(),
+        ))
         .expect("register");
     registry
 }
@@ -140,14 +157,11 @@ fn robot_scenario_with_real_adapters_replays_exactly() {
     assert!(!record.trajectory.is_empty());
 }
 
-/// Cannot hold with the real adapters: the real Intellect answers on the first pass, so the
-/// Intellect-abstains-then-Eve-Augur-re-evaluation order of the mock scenario never happens.
 #[test]
-#[ignore = "real Intellect answers on the first pass (single candidate, confidence 1.0), so Eve, Augur and re-evaluation never run"]
 fn robot_slow_path_order_with_real_adapters() {
     let mut lp = CognitiveLoop::new(
         config(23),
-        registry(),
+        hesitant_registry(),
         EveAdapter::new(23),
         Fixed(augur()),
         Echo::default(),
@@ -165,22 +179,18 @@ fn robot_slow_path_order_with_real_adapters() {
     );
 }
 
-/// Cannot hold with the real adapters: `EveAdapter` does not implement `investigate`, so there
-/// is no bounded investigation for the loop to report.
 #[test]
-#[ignore = "EveAdapter does not implement investigate, so the loop never runs an Eve investigation"]
 fn robot_eve_investigation_with_real_adapters() {
     let mut lp = CognitiveLoop::new(
         config(24),
-        registry(),
+        hesitant_registry(),
         EveAdapter::new(24),
         Fixed(augur()),
         Echo::default(),
     )
     .expect("loop");
     let report = lp.run(&scenario_input(anima_memory())).expect("cycle");
-    assert!(
-        report.investigation.is_some(),
-        "Eve ran a bounded investigation"
-    );
+    // Eve holds no facts about the object, so it reports unknown confidence and maximal risk,
+    // and the investigation policy stops on risk before it can ask for a human.
+    assert_eq!(report.investigation, Some(Termination::RiskPolicy));
 }
