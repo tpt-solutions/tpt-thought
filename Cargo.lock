@@ -1476,6 +1476,7 @@ dependencies = [
  "tpt-thought-core",
  "tpt-thought-deliberation",
  "tpt-thought-observatory",
+ "tpt-thought-provenance",
  "tpt-thought-providers",
  "tpt-thought-workspace",
  "uuid",
