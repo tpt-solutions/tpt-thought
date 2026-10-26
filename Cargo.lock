@@ -1476,6 +1476,7 @@ dependencies = [
  "tpt-thought-consolidation",
  "tpt-thought-core",
  "tpt-thought-deliberation",
+ "tpt-thought-loop",
  "tpt-thought-observatory",
  "tpt-thought-provenance",
  "tpt-thought-providers",

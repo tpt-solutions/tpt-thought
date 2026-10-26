@@ -9,7 +9,9 @@
 //!   approximate nearest-neighbour index.
 //! - [`AnimaBudget`] gives the compute-budget signal from CK's `BudgetManager` (§35), and CK's
 //!   compute, energy and thermal state as a [`ResourceSnapshot`] (§48.3). Thought states a cost;
-//!   CK decides whether it is admitted. Thought never schedules compute itself.
+//!   CK decides whether it is admitted. Thought never schedules compute itself. `AnimaBudget` is
+//!   the loop's [`ResourceGate`]: a cycle's requirement is admitted as flops on the CPU unit, and
+//!   a refused cycle is deferred.
 //! - [`AnimaBubbles`] gives each Thought bubble an execution boundary in CK's `ThoughtBubbleManager`:
 //!   opened when the bubble starts, quarantined when a circuit breaker trips, torn down when it
 //!   ends (§42, §48.4).
@@ -48,6 +50,7 @@ use tpt_thought_consolidation::{
     SleepRequest, SleepScheduler, ThresholdScheduler,
 };
 use tpt_thought_core::{ContentReference, MemoryRef};
+use tpt_thought_loop::{Admission, CognitiveRequirement, ResourceGate};
 use tpt_thought_workspace::{Episode, MemoryStore};
 use uuid::Uuid;
 
@@ -286,6 +289,7 @@ pub struct AnimaBudget {
     manager: BudgetManager,
     held: Vec<(ComputeUnit, u64)>,
     flops_budget: u64,
+    memory_pressure: f64,
 }
 
 impl AnimaBudget {
@@ -301,7 +305,14 @@ impl AnimaBudget {
             }),
             held: Vec::new(),
             flops_budget: flops,
+            memory_pressure: 0.0,
         }
+    }
+
+    /// Set the memory pressure reported with every snapshot, from `0.0` to `1.0`. CK reports no
+    /// memory figures, so the caller measures them and sets them here.
+    pub fn set_memory_pressure(&mut self, memory_pressure: f64) {
+        self.memory_pressure = memory_pressure;
     }
 
     /// Ask CK to admit `estimated_cost` flops on `unit`. Returns `true` and holds the flops if
@@ -398,6 +409,32 @@ impl SleepScheduler for AnimaBudget {
                 retry_after_nanos: defaults.retry_after_nanos,
             }
         }
+    }
+}
+
+/// CK admits each cycle's cost as flops on the CPU unit, and the loop releases it when the cycle
+/// ends. A cycle that CK refuses is deferred with the remaining budget as the reason.
+impl ResourceGate for AnimaBudget {
+    fn snapshot(&self) -> ResourceSnapshot {
+        self.resource_snapshot(self.memory_pressure)
+    }
+
+    fn admit(&mut self, requirement: &CognitiveRequirement) -> Admission {
+        if AnimaBudget::admit(self, ComputeUnit::CPU, requirement.estimated_cost) {
+            Admission::Admitted
+        } else {
+            Admission::Denied {
+                reason: format!(
+                    "CK refused {} flops on the CPU; {} remain",
+                    requirement.estimated_cost,
+                    self.remaining_flops()
+                ),
+            }
+        }
+    }
+
+    fn release(&mut self, requirement: &CognitiveRequirement) {
+        AnimaBudget::release(self, ComputeUnit::CPU, requirement.estimated_cost);
     }
 }
 
@@ -884,7 +921,14 @@ mod tests {
     use tpt_thought_consolidation::{
         persist, Attempt, ConsolidationConfig, ConsolidationStep, Consolidator, HistoryEntry,
     };
-    use tpt_thought_core::{IdGenerator, SeededEntropy, Timestamp};
+    use tpt_thought_core::{IdGenerator, Probability, SeededEntropy, StructuredValue, Timestamp};
+    use tpt_thought_loop::{
+        Action, ActionError, ActionSink, CandidatePlan, CognitiveLoop, CognitiveRequirement,
+        CycleOutcome, Input,
+    };
+    use tpt_thought_providers::{
+        Locality, Privacy, ProviderProfile, ProviderRegistry, ReferenceProvider,
+    };
 
     fn creator() -> SseAgentId {
         [7; 32]
@@ -1497,5 +1541,107 @@ mod tests {
         );
         assert_eq!(result, Err(EmbeddingRefused));
         assert_eq!(memory.storage.iter().count(), 0);
+    }
+
+    fn cost(estimated_cost: f64) -> CognitiveRequirement {
+        CognitiveRequirement {
+            estimated_cost,
+            ..CognitiveRequirement::default()
+        }
+    }
+
+    #[test]
+    fn ck_admits_a_requirement_that_fits_and_holds_it_until_released() {
+        let mut budget = AnimaBudget::new(100);
+        assert_eq!(
+            ResourceGate::admit(&mut budget, &cost(60.0)),
+            Admission::Admitted
+        );
+        match ResourceGate::admit(&mut budget, &cost(60.0)) {
+            Admission::Denied { reason } => assert!(reason.contains("40 remain"), "{reason}"),
+            Admission::Admitted => panic!("only 40 flops remain"),
+        }
+        ResourceGate::release(&mut budget, &cost(60.0));
+        assert_eq!(
+            ResourceGate::admit(&mut budget, &cost(60.0)),
+            Admission::Admitted
+        );
+    }
+
+    #[test]
+    fn the_snapshot_carries_the_callers_memory_pressure() {
+        let mut budget = AnimaBudget::new(100);
+        budget.set_memory_pressure(0.4);
+        assert!((budget.snapshot().memory_pressure - 0.4).abs() < 1e-9);
+    }
+
+    fn knows_the_grasp() -> ProviderRegistry {
+        let mut registry = ProviderRegistry::new();
+        registry
+            .register(
+                ReferenceProvider::new(
+                    "intellect",
+                    ProviderProfile::new(Locality::Local, Privacy::OnDevice),
+                )
+                .with_answer(
+                    "can the gripper grasp?",
+                    StructuredValue::Text("grasp".into()),
+                    Probability::new(0.95).expect("valid probability"),
+                ),
+            )
+            .expect("register");
+        registry
+    }
+
+    fn grasp_input() -> Input {
+        Input {
+            at: Timestamp(100),
+            source: "camera".into(),
+            observation: StructuredValue::Text("object in reach".into()),
+            question: "can the gripper grasp?".into(),
+            goal: "pick up the object".into(),
+            constraints: vec![],
+            memories: vec![],
+            candidates: vec![CandidatePlan {
+                name: "grasp".into(),
+                predicted_outcome: StructuredValue::Text("held".into()),
+                cost: 1.0,
+                risk: 0.1,
+            }],
+        }
+    }
+
+    /// Executor that reports the expected outcome as the actual one.
+    struct Echo;
+
+    impl ActionSink for Echo {
+        fn execute(&mut self, action: &Action) -> Result<StructuredValue, ActionError> {
+            Ok(action.expected.clone())
+        }
+    }
+
+    #[test]
+    fn ck_decides_whether_a_cycle_runs_and_a_refusal_is_reported() {
+        let mut lp = CognitiveLoop::builder()
+            .registry(knows_the_grasp())
+            .sink(Echo)
+            .build()
+            .expect("loop");
+        let mut ck = AnimaBudget::new(100);
+
+        let admitted = lp
+            .run_gated(&grasp_input(), &cost(60.0), &mut ck)
+            .expect("cycle");
+        assert!(matches!(admitted.outcome, CycleOutcome::Completed { .. }));
+        assert_eq!(ck.remaining_flops(), 100, "the cycle returned its flops");
+
+        let denied = lp
+            .run_gated(&grasp_input(), &cost(150.0), &mut ck)
+            .expect("a refusal is an outcome, not an error");
+        assert!(matches!(
+            denied.outcome,
+            CycleOutcome::Deferred { ref reason } if reason.contains("150 flops")
+        ));
+        assert_eq!(ck.remaining_flops(), 100, "a refused cycle holds nothing");
     }
 }

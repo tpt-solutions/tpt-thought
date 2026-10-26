@@ -4,6 +4,7 @@
 use crate::mode::CognitiveMode;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use tpt_thought_consolidation::ResourceSnapshot;
 
 /// Raw modulatory values as supplied or serialised. [`Modulation::new`] validates every field.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -129,6 +130,35 @@ impl Modulation {
     }
 }
 
+impl Modulation {
+    /// The modulation a cycle sees under the resource state `snapshot` (spec sections 48.3 and 81).
+    ///
+    /// Only arousal changes. Its value is raised to the [`resource_pressure`] when that is higher,
+    /// and never lowered. Resource strain then pushes an idle or deliberative cycle toward the
+    /// cheaper modes that run on the fast path (Reactive), while urgency, risk, uncertainty and
+    /// confidence still come from the thought. Uncertainty keeps its own rule, so a thought that
+    /// is unsure still investigates under pressure.
+    pub fn under_pressure(&self, snapshot: &ResourceSnapshot) -> Self {
+        let mut fields = self.fields;
+        fields.arousal = fields.arousal.max(resource_pressure(snapshot));
+        Self { fields }
+    }
+}
+
+/// The strain on resources, from `0.0` (none) to `1.0`: the largest of compute scarcity
+/// (`1 - compute_free`), energy scarcity (`1 - energy_available`) and `memory_pressure`. A reading
+/// that is not finite is no evidence of strain and is ignored.
+pub fn resource_pressure(snapshot: &ResourceSnapshot) -> f64 {
+    [
+        1.0 - snapshot.compute_free,
+        1.0 - snapshot.energy_available,
+        snapshot.memory_pressure,
+    ]
+    .into_iter()
+    .filter(|pressure| pressure.is_finite())
+    .fold(0.0, |strain, pressure| strain.max(pressure.clamp(0.0, 1.0)))
+}
+
 impl TryFrom<ModulationFields> for Modulation {
     type Error = ModulationError;
 
@@ -140,5 +170,140 @@ impl TryFrom<ModulationFields> for Modulation {
 impl From<Modulation> for ModulationFields {
     fn from(m: Modulation) -> Self {
         m.fields
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn resources(
+        compute_free: f64,
+        memory_pressure: f64,
+        energy_available: f64,
+    ) -> ResourceSnapshot {
+        ResourceSnapshot {
+            compute_free,
+            memory_pressure,
+            energy_available,
+        }
+    }
+
+    fn idle() -> Modulation {
+        Modulation::new(ModulationFields {
+            urgency: 0.1,
+            risk: 0.1,
+            novelty: 0.1,
+            reward: 0.1,
+            threat: 0.1,
+            confidence: 0.5,
+            uncertainty: 0.1,
+            arousal: 0.1,
+        })
+        .expect("valid modulation")
+    }
+
+    #[test]
+    fn pressure_is_the_largest_strain() {
+        assert_eq!(resource_pressure(&resources(1.0, 0.0, 1.0)), 0.0);
+        assert!((resource_pressure(&resources(0.25, 0.1, 0.9)) - 0.75).abs() < 1e-9);
+        assert!((resource_pressure(&resources(0.9, 0.1, 0.4)) - 0.6).abs() < 1e-9);
+        assert!((resource_pressure(&resources(1.0, 0.7, 1.0)) - 0.7).abs() < 1e-9);
+    }
+
+    #[test]
+    fn out_of_range_and_non_finite_readings_are_bounded() {
+        assert_eq!(resource_pressure(&resources(2.0, 0.0, 1.0)), 0.0);
+        assert_eq!(resource_pressure(&resources(-1.0, 9.0, 1.0)), 1.0);
+        assert_eq!(resource_pressure(&resources(f64::NAN, 0.0, 1.0)), 0.0);
+        assert_eq!(resource_pressure(&resources(1.0, f64::INFINITY, 1.0)), 0.0);
+    }
+
+    #[test]
+    fn full_resources_leave_the_modulation_unchanged() {
+        let base = idle();
+        assert_eq!(base.under_pressure(&resources(1.0, 0.0, 1.0)), base);
+    }
+
+    #[test]
+    fn pressure_raises_arousal_and_nothing_else() {
+        let pressed = idle().under_pressure(&resources(0.1, 0.0, 1.0));
+        let before = idle().fields();
+        let after = pressed.fields();
+        assert!((after.arousal - 0.9).abs() < 1e-9);
+        assert_eq!(
+            ModulationFields {
+                arousal: before.arousal,
+                ..after
+            },
+            before,
+            "only arousal may change"
+        );
+        let calm = Modulation::new(ModulationFields {
+            arousal: 0.7,
+            ..idle().fields()
+        })
+        .expect("valid modulation");
+        assert_eq!(
+            calm.under_pressure(&resources(0.9, 0.2, 1.0))
+                .fields()
+                .arousal,
+            0.7,
+            "pressure never lowers arousal"
+        );
+    }
+
+    #[test]
+    fn pressure_moves_an_idle_cycle_to_the_fast_path() {
+        assert_eq!(idle().select_mode(), CognitiveMode::Consolidation);
+        assert_eq!(
+            idle()
+                .under_pressure(&resources(0.1, 0.0, 1.0))
+                .select_mode(),
+            CognitiveMode::Reactive
+        );
+        assert_eq!(
+            idle()
+                .under_pressure(&resources(1.0, 0.0, 0.1))
+                .select_mode(),
+            CognitiveMode::Reactive,
+            "energy scarcity counts as pressure"
+        );
+    }
+
+    #[test]
+    fn mild_pressure_leaves_an_idle_cycle_idle() {
+        assert_eq!(
+            idle()
+                .under_pressure(&resources(1.0, 0.1, 1.0))
+                .select_mode(),
+            CognitiveMode::Consolidation,
+            "arousal 0.1 is still below 0.2"
+        );
+        assert_eq!(
+            idle()
+                .under_pressure(&resources(1.0, 0.3, 1.0))
+                .select_mode(),
+            CognitiveMode::Deliberative,
+            "arousal 0.3 is no longer below 0.2, so consolidation no longer applies"
+        );
+    }
+
+    #[test]
+    fn uncertainty_still_investigates_under_pressure() {
+        let unsure = Modulation::new(ModulationFields {
+            uncertainty: 0.8,
+            novelty: 0.6,
+            ..idle().fields()
+        })
+        .expect("valid modulation");
+        assert_eq!(unsure.select_mode(), CognitiveMode::Investigative);
+        assert_eq!(
+            unsure
+                .under_pressure(&resources(0.0, 1.0, 0.0))
+                .select_mode(),
+            CognitiveMode::Investigative,
+            "resource strain does not override the uncertainty rule"
+        );
     }
 }

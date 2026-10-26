@@ -79,6 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  completed `{action}`, prediction error {error:.2} ({level:?})");
         }
         CycleOutcome::Unresolved { reason } => println!("  unresolved: {reason}"),
+        CycleOutcome::Deferred { reason } => println!("  deferred: {reason}"),
     }
 
     println!("Trajectory:");

@@ -24,6 +24,7 @@ mod modulation;
 mod null;
 mod plan;
 mod replay;
+mod resources;
 mod slow;
 
 pub use action::{Action, ActionError, ActionSink};
@@ -36,8 +37,9 @@ pub use cycle::{
     TrajectoryStep,
 };
 pub use mode::CognitiveMode;
-pub use modulation::{Modulation, ModulationError, ModulationFields};
+pub use modulation::{resource_pressure, Modulation, ModulationError, ModulationFields};
 pub use null::{NullActionSink, NullEngine, NullEstimator};
 pub use plan::{CandidatePlan, Plan, PlanError};
 pub use replay::{replay, ReplayError, ReplayMetadata, ReplayRecord};
+pub use resources::{Admission, CognitiveRequirement, ResourceGate, Unmetered};
 pub use slow::{Estimate, Estimator, SlowStage};
