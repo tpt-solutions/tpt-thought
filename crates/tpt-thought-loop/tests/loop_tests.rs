@@ -10,10 +10,11 @@ use tpt_thought_loop::{
     replay, Action, ActionError, ActionSink, CandidatePlan, CognitiveLoop, CognitiveMode,
     CycleOutcome, CyclePhase, Estimate, Estimator, Input, LoopConfig, Modulation, ModulationError,
     ModulationFields, NullEngine, NullEstimator, ReplayError, ReplayMetadata, ReplayRecord,
-    SlowStage,
+    SlowStage, StepProvenance,
 };
 use tpt_thought_observatory::EventKind;
 use tpt_thought_prediction::ErrorLevel;
+use tpt_thought_provenance::{Hash256, IntegrityError, ProvenanceSource, ProvenanceStore};
 use tpt_thought_providers::{
     Decision, DecisionSource, HumanAnswer, HumanProvider, IntelligenceProvider,
     IntelligenceRequest, Locality, Privacy, ProviderError, ProviderId, ProviderProfile,
@@ -597,6 +598,128 @@ fn truncated_record_is_detected() {
         replay(&record, build),
         Err(ReplayError::Length { .. })
     ));
+}
+
+/// The first decision record in a captured run: its step and its id.
+fn first_decision(record: &mut ReplayRecord) -> &mut StepProvenance {
+    record
+        .provenance
+        .as_mut()
+        .expect("captured records carry provenance")
+        .iter_mut()
+        .find(|e| e.record.body.source == ProvenanceSource::Decision)
+        .expect("a decision was recorded")
+}
+
+#[test]
+fn captured_run_records_provenance_per_step() {
+    let record = captured();
+    let log = record.provenance.as_ref().expect("provenance captured");
+    assert!(!log.is_empty());
+    for entry in log {
+        // Every provenance record is written by a step of the trajectory.
+        assert!(entry.step < record.trajectory.len());
+    }
+    let decision = log
+        .iter()
+        .find(|e| e.record.body.source == ProvenanceSource::Decision)
+        .expect("a decision was recorded");
+    assert_eq!(decision.record.body.provider.as_deref(), Some("intellect"));
+    // The recorded chain is intact as captured.
+    let sealed = ProvenanceStore::restore(log.iter().map(|e| e.record.clone())).expect("chain");
+    assert_eq!(sealed.verify(), Ok(()));
+}
+
+#[test]
+fn tampered_provider_is_rejected_by_integrity_check() {
+    let mut record = captured();
+    let decision = first_decision(&mut record);
+    let (step, id) = (decision.step, decision.record.body.id);
+    decision.record.body.provider = Some("forged".into());
+    match replay(&record, build) {
+        Err(ReplayError::Integrity {
+            step: at,
+            error: IntegrityError::HashMismatch { record },
+        }) => {
+            assert_eq!(record, id);
+            assert_eq!(at, step);
+        }
+        other => panic!("expected an integrity failure, got {other:?}"),
+    }
+}
+
+#[test]
+fn tampered_hash_is_rejected_by_integrity_check() {
+    let mut record = captured();
+    let decision = first_decision(&mut record);
+    let (step, id) = (decision.step, decision.record.body.id);
+    decision.record.hash = Hash256([0; 32]);
+    match replay(&record, build) {
+        Err(ReplayError::Integrity {
+            step: at,
+            error: IntegrityError::HashMismatch { record },
+        }) => {
+            assert_eq!(record, id);
+            assert_eq!(at, step);
+        }
+        other => panic!("expected an integrity failure, got {other:?}"),
+    }
+}
+
+#[test]
+fn retagged_provenance_step_is_detected_on_rerun() {
+    // The step tag is not part of the hash, so the chain still verifies and the re-run catches it.
+    let mut record = captured();
+    let decision = first_decision(&mut record);
+    let (id, recorded_step) = (decision.record.body.id, decision.step);
+    decision.step += 1;
+    match replay(&record, build) {
+        Err(ReplayError::Provenance {
+            step,
+            record,
+            field,
+            expected,
+            actual,
+        }) => {
+            assert_eq!(step, recorded_step + 1);
+            assert_eq!(record, id);
+            assert_eq!(field, "step");
+            assert_eq!(expected, (recorded_step + 1).to_string());
+            assert_eq!(actual, recorded_step.to_string());
+        }
+        other => panic!("expected a provenance mismatch, got {other:?}"),
+    }
+}
+
+#[test]
+fn missing_provenance_records_are_detected() {
+    let mut record = captured();
+    record.provenance.as_mut().expect("provenance").pop();
+    assert!(matches!(
+        replay(&record, build),
+        Err(ReplayError::ProvenanceLength { .. })
+    ));
+}
+
+#[test]
+fn record_without_provenance_replays_on_trajectory_alone() {
+    // Records captured before provenance was recorded have no `provenance` key.
+    let record = captured();
+    let mut json: serde_json::Value = serde_json::to_value(&record).expect("serialise");
+    json.as_object_mut().expect("object").remove("provenance");
+    let legacy: ReplayRecord = serde_json::from_value(json).expect("deserialise legacy");
+    assert_eq!(legacy.provenance, None);
+    replay(&legacy, build).expect("legacy record replays");
+}
+
+#[test]
+fn provenance_survives_serialisation() {
+    let record = captured();
+    let json = serde_json::to_string(&record).expect("serialise");
+    assert!(json.contains("\"provenance\""));
+    let restored: ReplayRecord = serde_json::from_str(&json).expect("deserialise");
+    assert_eq!(restored.provenance, record.provenance);
+    replay(&restored, build).expect("replay with provenance from JSON matches");
 }
 
 // ---- Configuration ------------------------------------------------------------------------------

@@ -138,7 +138,31 @@ pub enum IntegrityError {
         /// The tampered record.
         record: ProvenanceId,
     },
+    /// Two records share an identity, so the chain is ambiguous.
+    Duplicate {
+        /// The repeated record.
+        record: ProvenanceId,
+    },
 }
+
+impl fmt::Display for IntegrityError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingParent { record, parent } => {
+                write!(
+                    f,
+                    "provenance record {record} names missing parent {parent}"
+                )
+            }
+            Self::HashMismatch { record } => {
+                write!(f, "provenance record {record} does not match its hash")
+            }
+            Self::Duplicate { record } => write!(f, "provenance record {record} appears twice"),
+        }
+    }
+}
+
+impl std::error::Error for IntegrityError {}
 
 /// Error inserting a record.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -187,6 +211,35 @@ impl ProvenanceStore {
     /// Look up a record.
     pub fn get(&self, id: &ProvenanceId) -> Option<&ProvenanceRecord> {
         self.records.get(id)
+    }
+
+    /// Rebuild a store from records sealed elsewhere, keeping their stored hashes so that
+    /// [`ProvenanceStore::verify`] can check them. `records` must be in insertion order, with
+    /// parents first. Hashes are not recomputed here, so a tampered record is caught by `verify`.
+    pub fn restore(
+        records: impl IntoIterator<Item = ProvenanceRecord>,
+    ) -> Result<Self, IntegrityError> {
+        let mut store = Self::new();
+        for rec in records {
+            let id = rec.body.id;
+            if store.records.contains_key(&id) {
+                return Err(IntegrityError::Duplicate { record: id });
+            }
+            if let Some(parent) = rec
+                .body
+                .parents
+                .iter()
+                .find(|p| !store.records.contains_key(p))
+            {
+                return Err(IntegrityError::MissingParent {
+                    record: id,
+                    parent: *parent,
+                });
+            }
+            store.order.push(id);
+            store.records.insert(id, rec);
+        }
+        Ok(store)
     }
 
     /// Seal and insert `body`. Parents must already be present.
@@ -366,6 +419,39 @@ mod tests {
             s.verify(),
             Err(IntegrityError::HashMismatch { .. })
         ));
+    }
+
+    #[test]
+    fn restored_store_verifies_and_rejects_tampered_records() {
+        let (s, _, [a, b, c]) = chain();
+        let records: Vec<_> = [a, b, c]
+            .iter()
+            .map(|id| s.get(id).unwrap().clone())
+            .collect();
+        let restored = ProvenanceStore::restore(records.clone()).unwrap();
+        assert_eq!(restored.verify(), Ok(()));
+
+        let mut forged = records.clone();
+        forged[0].body.provider = Some("forged".into());
+        let restored = ProvenanceStore::restore(forged).unwrap();
+        assert_eq!(
+            restored.verify(),
+            Err(IntegrityError::HashMismatch { record: a })
+        );
+
+        let mut dangling = records.clone();
+        dangling.remove(0);
+        assert!(matches!(
+            ProvenanceStore::restore(dangling),
+            Err(IntegrityError::MissingParent { .. })
+        ));
+
+        let mut twice = records.clone();
+        twice.push(records[0].clone());
+        assert_eq!(
+            ProvenanceStore::restore(twice).map(|_| ()),
+            Err(IntegrityError::Duplicate { record: a })
+        );
     }
 
     #[test]

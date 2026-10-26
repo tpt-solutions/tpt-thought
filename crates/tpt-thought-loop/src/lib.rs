@@ -32,7 +32,8 @@ pub use config::LoopConfig;
 pub use curiosity::{CuriosityDriver, CuriosityEvent, InvalidThreshold};
 pub use cycle::default_policy;
 pub use cycle::{
-    CognitiveLoop, CycleOutcome, CyclePhase, CycleReport, Input, LoopError, TrajectoryStep,
+    CognitiveLoop, CycleOutcome, CyclePhase, CycleReport, Input, LoopError, StepProvenance,
+    TrajectoryStep,
 };
 pub use mode::CognitiveMode;
 pub use modulation::{Modulation, ModulationError, ModulationFields};

@@ -43,7 +43,7 @@ use tpt_thought_prediction::{
     ErrorLevel, MatchConfig, NotComparable, PredictionError, PredictionEvent, PredictionTracker,
     ResolveError, ResponseLadder,
 };
-use tpt_thought_provenance::{ProvenanceBody, ProvenanceSource, ProvenanceStore};
+use tpt_thought_provenance::{ProvenanceBody, ProvenanceRecord, ProvenanceSource, ProvenanceStore};
 use tpt_thought_providers::{
     CalibrationTracker, CognitionMode, Decision, Deliberative, Escalation, FastPath,
     IntelligenceRequest, ProviderRegistry, Step,
@@ -100,6 +100,16 @@ pub struct TrajectoryStep {
     pub transition: TransitionKind,
     /// A short, deterministic description of what happened.
     pub detail: String,
+}
+
+/// A provenance record together with the trajectory step that wrote it. Replay checks these
+/// against a re-run, so a record can name the step that produced each piece of cognition.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StepProvenance {
+    /// Index of the trajectory step that wrote the record.
+    pub step: usize,
+    /// The sealed record, including its integrity hash.
+    pub record: ProvenanceRecord,
 }
 
 /// What the loop is told about the world for one cycle.
@@ -273,6 +283,7 @@ pub struct CognitiveLoop<E, A, S> {
     memory: Box<dyn MemoryStore>,
     predictions: PredictionTracker,
     provenance: ProvenanceStore,
+    provenance_log: Vec<StepProvenance>,
     trajectory: Vec<TrajectoryStep>,
     telemetry: Option<Box<dyn TelemetrySink>>,
     consolidator: Consolidator,
@@ -326,6 +337,7 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
             memory: Box::new(MemoryIndex::new()),
             predictions: PredictionTracker::new(MatchConfig::default()),
             provenance: ProvenanceStore::new(),
+            provenance_log: Vec::new(),
             trajectory: Vec::new(),
             telemetry: None,
             consolidator: Consolidator::new(ConsolidationConfig::default()),
@@ -410,6 +422,11 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
     /// Every step taken so far, across all cycles.
     pub fn trajectory(&self) -> &[TrajectoryStep] {
         &self.trajectory
+    }
+
+    /// Provenance records in the order they were written, each tagged with its trajectory step.
+    pub fn provenance_log(&self) -> &[StepProvenance] {
+        &self.provenance_log
     }
 
     /// The telemetry recorded so far.
@@ -989,18 +1006,24 @@ impl<E: DeliberationEngine, A: Estimator, S: ActionSink> CognitiveLoop<E, A, S> 
         }
     }
 
-    /// Store `body` as a provenance record and attach its id to the thought's `records`.
+    /// Store `body` as a provenance record and attach its id to the thought's `records`. Both
+    /// callers record their trajectory step immediately before writing, so the latest step is
+    /// the one that produced the record.
     fn write_provenance(
         &mut self,
         records: &mut Vec<ProvenanceId>,
         body: ProvenanceBody,
     ) -> Result<ProvenanceId, LoopError> {
-        let id = self
+        let record = self
             .provenance
             .insert(body)
             .map_err(|e| LoopError::Provenance(format!("{e:?}")))?
-            .body
-            .id;
+            .clone();
+        let id = record.body.id;
+        self.provenance_log.push(StepProvenance {
+            step: self.trajectory.len().saturating_sub(1),
+            record,
+        });
         records.push(id);
         Ok(id)
     }
