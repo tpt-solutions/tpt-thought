@@ -19,13 +19,18 @@
 //!   `NegotiationSession`: the provider runs the work, and Thought records what it reports.
 //!   The global workspace's publish, subscribe and withdraw are not mapped.
 //! - [`AnimaEpisodes`] stores Thought episodes in SSE's episode store (§14, §48.2).
+//! - [`AnimaConsolidation`] is the [`ConsolidationSink`] that writes consolidated knowledge and
+//!   history summaries into SSE as memories. Each item is written once, under a content-derived
+//!   identifier, so a repeated consolidation adds nothing.
 //!
 //! Not mapped, because `tpt-anima` does not provide them: a global workspace, and ZKPA
 //! attestation, proofs and the agency ledger (sessions and delegation are in the `zkpa` module).
 //! CK reports no memory figures, so memory pressure is supplied by the caller.
 
+use std::collections::HashMap;
 use std::time::Duration;
 
+use sha2::{Digest, Sha256};
 use tpt_anima_ck::thought_bubble::ThoughtBubbleManager;
 use tpt_anima_ck::types::{IsolationLevel, ThermalConstraints};
 use tpt_anima_ck::{BudgetManager, ComputeBudget, ComputeUnit, ThermalStatus};
@@ -39,7 +44,8 @@ use tpt_anima_sse::{
     SensoryModality, VectorEmbedding,
 };
 use tpt_thought_consolidation::{
-    ResourceSnapshot, SleepGrant, SleepRequest, SleepScheduler, ThresholdScheduler,
+    AbstractionKind, ConsolidationSink, HistorySummary, Knowledge, ResourceSnapshot, SleepGrant,
+    SleepRequest, SleepScheduler, ThresholdScheduler,
 };
 use tpt_thought_core::{ContentReference, MemoryRef};
 use tpt_thought_workspace::{Episode, MemoryStore};
@@ -85,17 +91,58 @@ impl AnimaMemory {
         tags: &[&str],
         embedding: &[f32],
     ) -> Option<ContentReference> {
-        if !valid_embedding(embedding) {
-            return None;
-        }
-        if self.dim == 0 {
-            self.dim = embedding.len();
-        } else if embedding.len() != self.dim {
+        if !self.admits(embedding) {
             return None;
         }
         self.written += 1;
         let mut id: MemoryId = [0; 32];
         id[24..].copy_from_slice(&self.written.to_be_bytes());
+        self.insert(id, text, tags, HashMap::new(), embedding);
+        Some(reference(&id))
+    }
+
+    /// Write a memory under a content-derived `id`. If a memory already has that id, nothing is
+    /// written and its reference is returned, so writing the same content twice stores it once.
+    /// `embed` runs only when the memory is new. Returns `None` if the new memory's embedding is
+    /// refused, as [`AnimaMemory::remember`] does.
+    fn remember_once(
+        &mut self,
+        id: MemoryId,
+        text: &str,
+        tags: &[&str],
+        custom: HashMap<String, String>,
+        embed: impl FnOnce() -> Vec<f32>,
+    ) -> Option<ContentReference> {
+        if self.storage.read_node(&id).is_none() {
+            let embedding = embed();
+            if !self.admits(&embedding) {
+                return None;
+            }
+            self.insert(id, text, tags, custom, &embedding);
+        }
+        Some(reference(&id))
+    }
+
+    /// Whether `embedding` can be indexed next to the memories held. The first accepted
+    /// embedding fixes the length for the store.
+    fn admits(&mut self, embedding: &[f32]) -> bool {
+        if !valid_embedding(embedding) {
+            return false;
+        }
+        if self.dim == 0 {
+            self.dim = embedding.len();
+        }
+        embedding.len() == self.dim
+    }
+
+    fn insert(
+        &mut self,
+        id: MemoryId,
+        text: &str,
+        tags: &[&str],
+        custom: HashMap<String, String>,
+        embedding: &[f32],
+    ) {
         let mut node = MemoryNode::new(
             id,
             VectorEmbedding::new(embedding.to_vec()),
@@ -105,8 +152,8 @@ impl AnimaMemory {
             self.creator,
         );
         node.metadata.tags = tags.iter().map(|t| (*t).to_string()).collect();
+        node.metadata.custom = custom;
         self.storage.write_node(node);
-        Some(reference(&id))
     }
 
     /// Up to `limit` memories whose embeddings are closest to `query` by cosine similarity,
@@ -159,6 +206,48 @@ impl MemoryStore for AnimaMemory {
             .map(|(_, id)| reference(&id))
             .collect()
     }
+}
+
+/// Domain tags for content-derived identifiers. A new tag means a new id scheme, so bump the
+/// version rather than reusing one.
+const KNOWLEDGE_DOMAIN: &[u8] = b"tpt-thought/knowledge/v1";
+const SUMMARY_DOMAIN: &[u8] = b"tpt-thought/history-summary/v1";
+
+/// Tags on every consolidated memory, and the kind tag on knowledge.
+const CONSOLIDATED_TAG: &str = "consolidated";
+const KNOWLEDGE_TAG: &str = "knowledge";
+const SUMMARY_TAG: &str = "history_summary";
+
+/// The identifier for a consolidated item: SHA-256 over each part, each prefixed by its length
+/// so that different splits of the same bytes give different identifiers.
+fn content_id(parts: &[&[u8]]) -> MemoryId {
+    let mut hasher = Sha256::new();
+    for part in parts {
+        hasher.update((part.len() as u64).to_be_bytes());
+        hasher.update(part);
+    }
+    hasher.finalize().into()
+}
+
+/// The stable name of a kind. These match the serde names, so they stay fixed if the enum grows.
+fn kind_tag(kind: AbstractionKind) -> &'static str {
+    match kind {
+        AbstractionKind::Semantic => "semantic",
+        AbstractionKind::Procedural => "procedural",
+        AbstractionKind::CausalModel => "causal_model",
+        AbstractionKind::Heuristic => "heuristic",
+        AbstractionKind::Policy => "policy",
+        AbstractionKind::Skill => "skill",
+    }
+}
+
+/// Comma-separated display forms, kept in a memory's metadata as its link back to evidence.
+fn joined<T: std::fmt::Display>(items: &[T]) -> String {
+    items
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 fn reference(id: &MemoryId) -> ContentReference {
@@ -638,6 +727,109 @@ impl AnimaEpisodes {
     }
 }
 
+/// Refused by [`AnimaConsolidation`] when the store will not index an item's embedding: it is
+/// empty, non-finite, all zero, or a different length from the embeddings already held.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EmbeddingRefused;
+
+impl std::fmt::Display for EmbeddingRefused {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "the store refused the embedding of a consolidated item")
+    }
+}
+
+impl std::error::Error for EmbeddingRefused {}
+
+/// Writes consolidated output into SSE through an [`AnimaMemory`] (todo Phase 6), so Anima holds
+/// the content and Thought keeps only the returned references.
+///
+/// Identifiers are content-derived, so a repeated write is idempotent:
+///
+/// - knowledge: SHA-256 over `"tpt-thought/knowledge/v1"`, the kind's name and the statement.
+///   The same statement under the same kind is the same memory; a changed statement is a new one.
+/// - history summary: SHA-256 over `"tpt-thought/history-summary/v1"`, the start and end times,
+///   each covered thought identifier, and the summary text.
+///
+/// Knowledge keeps its evidence in the memory's metadata: the episodes it was abstracted from and
+/// its provenance, as comma-separated display forms, so the link back to evidence survives.
+///
+/// The store indexes by meaning, so each new item is embedded by `embed`. Thought has no embedder
+/// of its own, so the caller supplies one. It runs only for items not yet stored.
+pub struct AnimaConsolidation<'a, E> {
+    memory: &'a mut AnimaMemory,
+    embed: E,
+}
+
+impl<'a, E: FnMut(&str) -> Vec<f32>> AnimaConsolidation<'a, E> {
+    /// A sink that writes into `memory`, embedding each new item with `embed`.
+    pub fn new(memory: &'a mut AnimaMemory, embed: E) -> Self {
+        Self { memory, embed }
+    }
+}
+
+impl<E: FnMut(&str) -> Vec<f32>> ConsolidationSink for AnimaConsolidation<'_, E> {
+    type Error = EmbeddingRefused;
+
+    fn store_knowledge(
+        &mut self,
+        knowledge: &Knowledge,
+    ) -> Result<ContentReference, EmbeddingRefused> {
+        let Self { memory, embed } = self;
+        let kind = kind_tag(knowledge.kind);
+        let id = content_id(&[
+            KNOWLEDGE_DOMAIN,
+            kind.as_bytes(),
+            knowledge.statement.as_bytes(),
+        ]);
+        let custom = HashMap::from([
+            ("episodes".to_string(), joined(&knowledge.sources)),
+            ("provenance".to_string(), joined(&knowledge.provenance)),
+        ]);
+        memory
+            .remember_once(
+                id,
+                &knowledge.statement,
+                &[CONSOLIDATED_TAG, KNOWLEDGE_TAG, kind],
+                custom,
+                || embed(&knowledge.statement),
+            )
+            .ok_or(EmbeddingRefused)
+    }
+
+    fn store_summary(
+        &mut self,
+        summary: &HistorySummary,
+    ) -> Result<ContentReference, EmbeddingRefused> {
+        let Self { memory, embed } = self;
+        let from = summary.from.as_nanos().to_be_bytes();
+        let to = summary.to.as_nanos().to_be_bytes();
+        let mut parts: Vec<&[u8]> = vec![SUMMARY_DOMAIN, &from[..], &to[..]];
+        for thought in &summary.covered {
+            parts.push(&thought.as_bytes()[..]);
+        }
+        parts.push(summary.summary.as_bytes());
+        let id = content_id(&parts);
+        let custom = HashMap::from([
+            (
+                "from_nanos".to_string(),
+                summary.from.as_nanos().to_string(),
+            ),
+            ("to_nanos".to_string(), summary.to.as_nanos().to_string()),
+            ("covered".to_string(), joined(&summary.covered)),
+            ("provenance".to_string(), joined(&summary.provenance)),
+        ]);
+        memory
+            .remember_once(
+                id,
+                &summary.summary,
+                &[CONSOLIDATED_TAG, SUMMARY_TAG],
+                custom,
+                || embed(&summary.summary),
+            )
+            .ok_or(EmbeddingRefused)
+    }
+}
+
 /// Execution boundaries for Thought bubbles, held by CK's `ThoughtBubbleManager` (§42, §48.4).
 /// A bubble is identified by the [`Uuid`] returned from [`AnimaBubbles::open`].
 pub struct AnimaBubbles {
@@ -689,6 +881,10 @@ impl AnimaBubbles {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tpt_thought_consolidation::{
+        persist, Attempt, ConsolidationConfig, ConsolidationStep, Consolidator, HistoryEntry,
+    };
+    use tpt_thought_core::{IdGenerator, SeededEntropy, Timestamp};
 
     fn creator() -> SseAgentId {
         [7; 32]
@@ -1123,5 +1319,183 @@ mod tests {
             budget.grant(&request(), &starved),
             SleepGrant::Deferred { .. }
         ));
+    }
+
+    /// A deterministic embedding with no zero vector for any non-empty text.
+    fn embed(text: &str) -> Vec<f32> {
+        let mut v = vec![0.0; 8];
+        for (i, byte) in text.bytes().enumerate() {
+            v[(usize::from(byte) + i) % 8] += 1.0;
+        }
+        v
+    }
+
+    /// Consolidation output with one strategy that works (so it yields procedural knowledge and
+    /// a skill) and one summary from history compression.
+    fn consolidated_output() -> Consolidator {
+        let ids = IdGenerator::new(SeededEntropy::new(90));
+        let config = ConsolidationConfig {
+            keep_recent_history: 1,
+            ..ConsolidationConfig::default()
+        };
+        let mut consolidator = Consolidator::new(config);
+        for _ in 0..4 {
+            consolidator.record_attempt(Attempt {
+                strategy: "cache-first".into(),
+                succeeded: true,
+                error_signature: None,
+                provenance: vec![ids.provenance()],
+            });
+        }
+        for i in 0..3 {
+            consolidator.record_thought(HistoryEntry {
+                thought: ids.thought(),
+                at: Timestamp(i),
+                summary: format!("s{i}"),
+                provenance: vec![ids.provenance()],
+            });
+        }
+        consolidator.apply(ConsolidationStep::DetectPatterns, Timestamp(0));
+        consolidator.apply(ConsolidationStep::Abstract, Timestamp(0));
+        consolidator.apply(ConsolidationStep::CompressHistory, Timestamp(0));
+        consolidator
+    }
+
+    #[test]
+    fn consolidated_output_is_persisted_and_recalled_by_reference() {
+        let mut memory = AnimaMemory::new(creator());
+        let consolidator = consolidated_output();
+        let persisted = persist(
+            &consolidator,
+            &mut AnimaConsolidation::new(&mut memory, embed),
+        )
+        .unwrap();
+
+        let kinds: Vec<_> = persisted.knowledge.iter().map(|k| k.kind).collect();
+        assert_eq!(kinds, [AbstractionKind::Procedural, AbstractionKind::Skill]);
+        assert_eq!(persisted.summaries.len(), 1);
+
+        // Recall by tag returns exactly the consolidated memories, and each resolves to its text.
+        let recalled = memory.retrieve(&[CONSOLIDATED_TAG.to_string()], 10);
+        assert_eq!(recalled.len(), 3);
+        assert_eq!(
+            memory.text_of(&persisted.knowledge[0].memory).as_deref(),
+            Some("prefer strategy cache-first")
+        );
+        assert_eq!(
+            memory.text_of(&persisted.knowledge[1].memory).as_deref(),
+            Some("skill cache-first")
+        );
+        assert_eq!(
+            memory.text_of(&persisted.summaries[0]).as_deref(),
+            Some("s0; s1")
+        );
+
+        // Recall by meaning returns the same reference.
+        assert_eq!(
+            memory.recall_similar(&embed("prefer strategy cache-first"), 1),
+            vec![persisted.knowledge[0].memory.clone()]
+        );
+    }
+
+    #[test]
+    fn repeated_consolidation_of_the_same_result_stores_nothing_twice() {
+        let mut memory = AnimaMemory::new(creator());
+        let first = persist(
+            &consolidated_output(),
+            &mut AnimaConsolidation::new(&mut memory, embed),
+        )
+        .unwrap();
+        let stored = memory.storage.iter().count();
+        assert_eq!(stored, 3);
+
+        // An identical result, built again from the same inputs, resolves to the same memories.
+        let second = persist(
+            &consolidated_output(),
+            &mut AnimaConsolidation::new(&mut memory, embed),
+        )
+        .unwrap();
+        assert_eq!(second, first);
+        assert_eq!(memory.storage.iter().count(), stored);
+    }
+
+    #[test]
+    fn statements_and_kinds_map_to_distinct_memories() {
+        let mut memory = AnimaMemory::new(creator());
+        let mut sink = AnimaConsolidation::new(&mut memory, embed);
+        let knowledge = |kind, statement: &str| Knowledge {
+            kind,
+            statement: statement.into(),
+            sources: Vec::new(),
+            provenance: Vec::new(),
+        };
+        let a = sink
+            .store_knowledge(&knowledge(
+                AbstractionKind::Heuristic,
+                "guard against timeout",
+            ))
+            .unwrap();
+        let b = sink
+            .store_knowledge(&knowledge(
+                AbstractionKind::Heuristic,
+                "guard against retry",
+            ))
+            .unwrap();
+        let c = sink
+            .store_knowledge(&knowledge(AbstractionKind::Policy, "guard against timeout"))
+            .unwrap();
+        assert_ne!(a, b);
+        assert_ne!(a, c);
+        assert_eq!(memory.storage.iter().count(), 3);
+    }
+
+    #[test]
+    fn evidence_links_are_kept_in_the_memory_not_in_thought() {
+        let mut memory = AnimaMemory::new(creator());
+        let ids = IdGenerator::new(SeededEntropy::new(91));
+        let knowledge = Knowledge {
+            kind: AbstractionKind::Semantic,
+            statement: "kettle recurs".into(),
+            sources: vec![ids.episode(), ids.episode()],
+            provenance: vec![ids.provenance()],
+        };
+        let expected_sources = joined(&knowledge.sources);
+        let reference = AnimaConsolidation::new(&mut memory, embed)
+            .store_knowledge(&knowledge)
+            .unwrap();
+        let id = parse_id(&reference.id).unwrap();
+        let node = memory.storage.read_node(&id).unwrap();
+        assert_eq!(node.metadata.custom["episodes"], expected_sources);
+        assert_eq!(
+            node.metadata.custom["provenance"],
+            joined(&knowledge.provenance)
+        );
+    }
+
+    #[test]
+    fn thought_side_results_carry_references_only() {
+        let mut memory = AnimaMemory::new(creator());
+        let persisted = persist(
+            &consolidated_output(),
+            &mut AnimaConsolidation::new(&mut memory, embed),
+        )
+        .unwrap();
+        let debug = format!("{persisted:?}");
+        for text in ["prefer strategy", "skill cache-first", "s0; s1"] {
+            assert!(!debug.contains(text), "{text} leaked into Thought's result");
+        }
+        assert!(debug.contains(STORE_NAME));
+        assert_eq!(persisted.knowledge.len(), 2);
+    }
+
+    #[test]
+    fn a_refused_embedding_stores_nothing_and_reports_the_refusal() {
+        let mut memory = AnimaMemory::new(creator());
+        let result = persist(
+            &consolidated_output(),
+            &mut AnimaConsolidation::new(&mut memory, |_: &str| vec![0.0; 8]),
+        );
+        assert_eq!(result, Err(EmbeddingRefused));
+        assert_eq!(memory.storage.iter().count(), 0);
     }
 }

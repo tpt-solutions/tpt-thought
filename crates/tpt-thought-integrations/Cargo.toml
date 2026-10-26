@@ -15,7 +15,7 @@ readme = "README.md"
 default = []
 intellect = ["dep:tpt-intellect-core", "dep:tpt-intellect-backend"]
 eve = ["dep:tpt-eve-core", "dep:tpt-eve-metacognition", "dep:tpt-eve-causal", "dep:tpt-eve-abstraction", "dep:tpt-eve-active-learning", "dep:tpt-eve-symbolic"]
-anima = ["dep:tpt-anima-sse", "dep:tpt-anima-inp", "dep:tpt-anima-ck", "dep:tpt-thought-consolidation", "dep:uuid"]
+anima = ["dep:tpt-anima-sse", "dep:tpt-anima-inp", "dep:tpt-anima-ck", "dep:tpt-thought-consolidation", "dep:uuid", "dep:sha2"]
 augur = ["dep:tpt-augur-frontend", "dep:tpt-augur-ir", "dep:tpt-augur-runtime"]
 axiom = ["dep:tpt-axiom-core", "dep:tpt-axiom-ir", "dep:tpt-axiom-verify"]
 remote = ["intellect", "dep:tpt-intellect-remote"]
@@ -33,6 +33,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 # Matches the `uuid` already in Cargo.lock through tpt-anima-ck; needed to name bubble handles.
 uuid = { version = "1", optional = true }
+# Content-derived identifiers for consolidated memories, so a repeated write is idempotent.
+sha2 = { workspace = true, optional = true }
 
 # Sibling repositories, each pinned to the revision reviewed for this crate.
 # tpt-axiom is pinned to the commit that moved its cargo-generate template out of the way.

@@ -13,6 +13,7 @@ mod gaps;
 mod history;
 mod memory;
 mod patterns;
+mod persist;
 mod phase;
 mod plan;
 mod replay;
@@ -33,6 +34,7 @@ pub use patterns::{
     abstract_knowledge, detect, AbstractionKind, Attempt, Deliberation, Detection, Knowledge,
     LearnedPolicy, PatternConfig, RepeatedMistake, Skill, SkillRoute, StrategyReport, Verdict,
 };
+pub use persist::{persist, ConsolidationSink, PersistedConsolidation, PersistedKnowledge};
 pub use phase::{IllegalPhaseTransition, PhaseEvent, SystemPhase};
 pub use plan::{ConsolidationPlan, ConsolidationStep};
 pub use replay::{Episode, ThoughtReplay};

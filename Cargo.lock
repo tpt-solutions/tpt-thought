@@ -1451,6 +1451,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
+ "sha2",
  "tpt-anima-ck",
  "tpt-anima-inp",
  "tpt-anima-sse",
