@@ -18,10 +18,11 @@
 //! Attestation and proof results are returned as strings for the provenance `verification` field,
 //! so Thought's provenance types do not depend on this module.
 //!
-//! Not mapped: ownership states and the agency ledger. Anima has no ownership model: its
-//! delegation grants permissions, not responsibility for a thought, so it cannot stand in for
-//! `ThoughtOwnership::Delegated`. Ownership stays with Thought. The ledger is not in §40, and Thought
-//! does not hold one.
+//! Ownership states and the agency ledger are Thought's, not Anima's. The pinned `tpt-anima-zkpa`
+//! has no ownership model: its delegation grants permissions, not responsibility for a thought. So
+//! [`AnimaIdentity::transfer_ownership`] takes its authority from the delegations above, and records
+//! the change in Thought's [`AgencyLedger`] with the ZKPA marker as the basis. A delegation with the
+//! [`TRANSFER_PERMISSION`] lets its holder move a thought the owner has not handed over.
 
 use std::time::Duration;
 
@@ -29,7 +30,13 @@ use tpt_anima_zkpa::{
     AttestationPlatform, AttestationService, DelegationManager, HardwareAttestation,
     ProofGenerator, ProofSystem, SessionManager, ZKCircuit, ZKProof, ZkpaError,
 };
+use tpt_thought_core::{
+    AgencyEntry, AgencyLedger, LedgerError, ThoughtId, ThoughtOwnership, Timestamp,
+};
 use uuid::Uuid;
+
+/// The permission an owner grants to let another agent move a thought's ownership state.
+pub const TRANSFER_PERMISSION: &str = "thought:transfer";
 
 /// Why an identity operation was refused.
 #[derive(Debug, Clone, PartialEq)]
@@ -194,6 +201,90 @@ impl AnimaIdentity {
         ProofGenerator::new().verify(proof).map_err(refused)?;
         Ok(format!("zkpa:proof:{}:groth16-verified", proof.proof_type))
     }
+
+    /// Open `thought` in `ledger` with `owner` as its creating agent. The thought starts private.
+    pub fn open_ownership(
+        &self,
+        ledger: &mut AgencyLedger,
+        thought: ThoughtId,
+        owner: Uuid,
+    ) -> Result<(), IdentityError> {
+        ledger
+            .open(thought, owner.to_string())
+            .map_err(ledger_refused)
+    }
+
+    /// Move `thought` to `to` on behalf of `actor`, and record the change in `ledger`.
+    ///
+    /// Authority comes from the delegations held by this adapter:
+    ///
+    /// - the agent holding the thought may move it: the owner, or the delegate named by a
+    ///   `Delegated` state (basis `zkpa:holder`);
+    /// - the owner may always move it, which lets it reclaim a delegated thought (`zkpa:owner`);
+    /// - any other agent needs a live [`TRANSFER_PERMISSION`] from the owner
+    ///   (`zkpa:delegation:thought:transfer`). Revoking it takes effect on the next call.
+    ///
+    /// A `Delegated` target must be an agent identity (a UUID). The ledger checks the state
+    /// transition itself, so a published thought cannot be moved back to private.
+    pub fn transfer_ownership(
+        &self,
+        ledger: &mut AgencyLedger,
+        thought: ThoughtId,
+        actor: Uuid,
+        to: ThoughtOwnership,
+        at: Timestamp,
+    ) -> Result<(), IdentityError> {
+        let owner = ledger
+            .owner(thought)
+            .and_then(|owner| Uuid::parse_str(owner).ok())
+            .ok_or_else(|| {
+                IdentityError::Refused(format!("thought {thought:?} has no owner in the ledger"))
+            })?;
+        // An opened thought always has a current state, so the owner check above covers it.
+        let current = ledger.current(thought).unwrap_or_default();
+        let holder = match &current {
+            ThoughtOwnership::Delegated { to } => Uuid::parse_str(to).map_err(|_| {
+                IdentityError::Refused(format!("delegate `{to}` is not an agent identity"))
+            })?,
+            _ => owner,
+        };
+
+        let basis = if actor == holder {
+            "zkpa:holder"
+        } else if actor == owner {
+            "zkpa:owner"
+        } else if self
+            .delegations
+            .is_authorized(owner, actor, TRANSFER_PERMISSION)
+        {
+            "zkpa:delegation:thought:transfer"
+        } else {
+            return Err(IdentityError::Refused(format!(
+                "agent {actor} does not hold thought {thought:?}"
+            )));
+        };
+
+        if let ThoughtOwnership::Delegated { to: delegate } = &to {
+            Uuid::parse_str(delegate).map_err(|_| {
+                IdentityError::Refused(format!("delegate `{delegate}` is not an agent identity"))
+            })?;
+        }
+
+        ledger
+            .record(AgencyEntry {
+                thought,
+                from: current,
+                to,
+                actor: actor.to_string(),
+                basis: basis.to_string(),
+                at,
+            })
+            .map_err(ledger_refused)
+    }
+}
+
+fn ledger_refused(error: LedgerError) -> IdentityError {
+    IdentityError::Refused(error.to_string())
 }
 
 #[cfg(test)]
@@ -362,6 +453,153 @@ mod tests {
             identity.delegate(agent(1), agent(2), &[]),
             Err(IdentityError::Refused(reason)) if reason.contains("empty permissions")
         ));
+    }
+
+    fn thought_id(seed: u64) -> ThoughtId {
+        IdGenerator::new(SeededEntropy::new(seed)).thought()
+    }
+
+    #[test]
+    fn owner_hands_a_thought_to_a_delegate_who_publishes_it() {
+        let identity = AnimaIdentity::new();
+        let mut ledger = AgencyLedger::new();
+        let (owner, delegate) = (agent(1), agent(2));
+        let id = thought_id(10);
+        identity.open_ownership(&mut ledger, id, owner).unwrap();
+
+        let handed = ThoughtOwnership::Delegated {
+            to: delegate.to_string(),
+        };
+        identity
+            .transfer_ownership(&mut ledger, id, owner, handed, Timestamp(1))
+            .unwrap();
+        identity
+            .transfer_ownership(
+                &mut ledger,
+                id,
+                delegate,
+                ThoughtOwnership::Published,
+                Timestamp(2),
+            )
+            .unwrap();
+
+        let bases: Vec<&str> = ledger.history(id).map(|e| e.basis.as_str()).collect();
+        // While private, the owner is also the holder, so the holder rule applies first.
+        assert_eq!(bases, ["zkpa:holder", "zkpa:holder"]);
+        assert_eq!(ledger.current(id), Some(ThoughtOwnership::Published));
+    }
+
+    #[test]
+    fn a_stranger_cannot_move_a_thought() {
+        let identity = AnimaIdentity::new();
+        let mut ledger = AgencyLedger::new();
+        let id = thought_id(11);
+        identity.open_ownership(&mut ledger, id, agent(1)).unwrap();
+
+        let result = identity.transfer_ownership(
+            &mut ledger,
+            id,
+            agent(9),
+            ThoughtOwnership::Shared,
+            Timestamp(1),
+        );
+        assert!(
+            matches!(result, Err(IdentityError::Refused(reason)) if reason.contains("does not hold"))
+        );
+        assert_eq!(ledger.current(id), Some(ThoughtOwnership::Private));
+    }
+
+    #[test]
+    fn transfer_permission_can_be_granted_and_revoked() {
+        let mut identity = AnimaIdentity::new();
+        let mut ledger = AgencyLedger::new();
+        let (owner, helper) = (agent(1), agent(2));
+        let id = thought_id(12);
+        identity.open_ownership(&mut ledger, id, owner).unwrap();
+        identity
+            .delegate(owner, helper, &[TRANSFER_PERMISSION])
+            .unwrap();
+
+        identity
+            .transfer_ownership(
+                &mut ledger,
+                id,
+                helper,
+                ThoughtOwnership::Shared,
+                Timestamp(1),
+            )
+            .unwrap();
+        assert_eq!(
+            ledger.last_entry(id).map(|e| e.basis.as_str()),
+            Some("zkpa:delegation:thought:transfer")
+        );
+
+        identity.revoke_delegation(owner, helper).unwrap();
+        let after_revoke = identity.transfer_ownership(
+            &mut ledger,
+            id,
+            helper,
+            ThoughtOwnership::Private,
+            Timestamp(2),
+        );
+        assert!(after_revoke.is_err());
+        assert_eq!(ledger.history(id).count(), 1);
+    }
+
+    #[test]
+    fn the_owner_can_reclaim_a_delegated_thought() {
+        let identity = AnimaIdentity::new();
+        let mut ledger = AgencyLedger::new();
+        let (owner, delegate) = (agent(1), agent(2));
+        let id = thought_id(13);
+        identity.open_ownership(&mut ledger, id, owner).unwrap();
+        let handed = ThoughtOwnership::Delegated {
+            to: delegate.to_string(),
+        };
+        identity
+            .transfer_ownership(&mut ledger, id, owner, handed, Timestamp(1))
+            .unwrap();
+
+        identity
+            .transfer_ownership(
+                &mut ledger,
+                id,
+                owner,
+                ThoughtOwnership::Private,
+                Timestamp(2),
+            )
+            .unwrap();
+        assert_eq!(ledger.current(id), Some(ThoughtOwnership::Private));
+    }
+
+    #[test]
+    fn delegates_and_state_changes_are_checked() {
+        let identity = AnimaIdentity::new();
+        let mut ledger = AgencyLedger::new();
+        let owner = agent(1);
+        let id = thought_id(14);
+        identity.open_ownership(&mut ledger, id, owner).unwrap();
+
+        let not_an_agent = ThoughtOwnership::Delegated { to: "bob".into() };
+        assert!(matches!(
+            identity.transfer_ownership(&mut ledger, id, owner, not_an_agent, Timestamp(1)),
+            Err(IdentityError::Refused(reason)) if reason.contains("not an agent identity")
+        ));
+
+        identity
+            .transfer_ownership(
+                &mut ledger,
+                id,
+                owner,
+                ThoughtOwnership::Published,
+                Timestamp(2),
+            )
+            .unwrap();
+        assert!(matches!(
+            identity.transfer_ownership(&mut ledger, id, owner, ThoughtOwnership::Private, Timestamp(3)),
+            Err(IdentityError::Refused(reason)) if reason.contains("cannot move")
+        ));
+        assert!(identity.open_ownership(&mut ledger, id, owner).is_err());
     }
 
     #[test]

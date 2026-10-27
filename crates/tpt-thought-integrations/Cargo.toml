@@ -17,7 +17,7 @@ intellect = ["dep:tpt-intellect-core", "dep:tpt-intellect-backend"]
 eve = ["dep:tpt-eve-core", "dep:tpt-eve-metacognition", "dep:tpt-eve-causal", "dep:tpt-eve-abstraction", "dep:tpt-eve-active-learning", "dep:tpt-eve-symbolic"]
 anima = ["dep:tpt-anima-sse", "dep:tpt-anima-inp", "dep:tpt-anima-ck", "dep:tpt-thought-consolidation", "dep:tpt-thought-loop", "dep:uuid", "dep:sha2"]
 augur = ["dep:tpt-augur-frontend", "dep:tpt-augur-ir", "dep:tpt-augur-runtime"]
-axiom = ["dep:tpt-axiom-core", "dep:tpt-axiom-ir", "dep:tpt-axiom-verify"]
+axiom = ["dep:tpt-axiom-core", "dep:tpt-axiom-ir", "dep:tpt-axiom-verify", "dep:tpt-axiom-zk"]
 remote = ["intellect", "dep:tpt-intellect-remote"]
 local = ["remote", "dep:tpt-infer", "tpt-intellect-remote/infer"]
 pulse = ["dep:tpt-pulse-core", "dep:tpt-thought-observatory"]
@@ -58,6 +58,7 @@ tpt-augur-runtime = { git = "https://github.com/TPT-Solutions/tpt-augur", rev = 
 tpt-axiom-core = { git = "https://github.com/tpt-solutions/tpt-axiom", rev = "42c495f7751db5acc3c571bb890da41a153f75ba", version = "0.1.0", optional = true }
 tpt-axiom-ir = { git = "https://github.com/tpt-solutions/tpt-axiom", rev = "42c495f7751db5acc3c571bb890da41a153f75ba", version = "0.1.0", optional = true }
 tpt-axiom-verify = { git = "https://github.com/tpt-solutions/tpt-axiom", rev = "42c495f7751db5acc3c571bb890da41a153f75ba", version = "0.1.0", optional = true }
+tpt-axiom-zk = { git = "https://github.com/tpt-solutions/tpt-axiom", rev = "42c495f7751db5acc3c571bb890da41a153f75ba", version = "0.1.0", optional = true }
 tpt-intellect-remote = { git = "https://github.com/TPT-Solutions/tpt-intellect", rev = "a502c0139a7e5cc12b7adf8fb9bdbbae31f69ffc", version = "0.1.0", features = ["serde"], optional = true }
 # tpt-infer has no revision pin in tpt-intellect-remote's manifest, so this uses the same
 # unpinned source; Cargo.lock holds the commit both resolve to, so only one copy is built.

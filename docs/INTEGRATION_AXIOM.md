@@ -31,14 +31,15 @@ recorded as epistemic uncertainty. That reading is a design choice, and it is do
   `lhs <= rhs` or `lhs < rhs`, using `tpt_axiom_verify::check_comparison`. A passing check gives
   `Verified`. A failing check returns `ConstraintError::Mismatch` with both polynomials, so the
   caller can see the disagreement. A missing constraint or expression is also an error.
-- `Proven` is never produced. That needs a ZK verifier, which the adapter does not run.
+- `verify_proven` gives `Proven` when a `ProofClaim` verifies. It takes the backend and the verifying
+  key from the caller, never from the claim, and rejects a claim made against a different circuit
+  (the claim's IR digest must match). A rejected proof is `ProofError::Rejected`, and a backend
+  failure is `ProofError::Backend`. Thought ships no trusted key and selects no backend, so
+  `Proven` is reachable only when a caller supplies both.
 
 ## Not mapped
 
-- Verification markers from ZK proof envelopes (`tpt-axiom-zk`). The adapter does not claim a proof
-  it has not checked, so nothing yields `Proven`.
 - Axiom's `decision_types` (`Calibration`, `Decision`, `Hypotheses`). They are not yet adapted.
-
 ## Tests
 
 The tests cover:

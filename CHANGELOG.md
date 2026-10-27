@@ -5,6 +5,23 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `tpt-thought-core`: `AgencyLedger`, an append-only record of each thought's owner and every
+  ownership change. A change must start from the state the ledger holds and must be allowed by
+  `ThoughtOwnership::can_transition_to`. `Published` can only move to `Archived`, and `Archived` is
+  terminal.
+- ZKPA ownership: `AnimaIdentity::open_ownership` and `transfer_ownership`. Authority comes from ZKPA
+  delegation, through the holder, the owner, or a `thought:transfer` permission. The basis is
+  recorded as a `zkpa:` marker.
+- Axiom proofs: `verify_proven` gives `EpistemicStatus::Proven` for a proof claim that verifies under
+  a caller-supplied backend and verifying key.
+
+### Changed
+
+- Observatory UI and sleep visualisation are out of scope for Thought. They belong to Anima
+  Observatory.
+
 ## [0.1.1] - 2026-10-27
 
 ### Added

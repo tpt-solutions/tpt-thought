@@ -148,7 +148,7 @@ Ground rules (apply to every phase)
 - [x] Global workspace: publish, attend, subscribe, broadcast, request, withdraw (§12)
 - [x] Decide: `tpt-anima-workspace` crate vs inside CK/SSE (§48.1). Decision: no Anima workspace. The cognitive workspace stays in Thought (`GlobalWorkspace`), and cross-agent transport uses INP. Revisit at Phase 10 if multi-agent sharing needs shared persistent state.
 - [x] INP integration: intention negotiation and execution (§23, §24). `AnimaBroadcast::open_intention` runs the bid round through `NegotiationSession` and records the provider's outcome in `AnimaIntention`. Fallback strategies are not used
-- [ ] ZKPA integration: identity, permissions, attestation, ownership states (§40). Sessions, delegation, attestation and Groth16 proofs are mapped. Ownership states are not: the pinned `tpt-anima-zkpa` has no counterpart
+- [x] ZKPA integration: identity, permissions, attestation, ownership states (§40). Sessions, delegation, attestation and Groth16 proofs are mapped. Ownership states and the agency ledger are Thought's (`AgencyLedger` in core; transfers gated by ZKPA delegation in `AnimaIdentity::transfer_ownership`), since the pinned `tpt-anima-zkpa` has no counterpart
 - [x] CK integration: send cognitive requirements, receive scheduling decisions (§35)
 - [x] Homeostatic state consumption: compute budget, memory/latency pressure, energy, urgency, risk, uncertainty (§48.3, §81)
 - [x] Cognitive circuit breakers: repetition loops, thought/hypothesis explosion, recursive escalation, confidence oscillation, contradiction loops, resource exhaustion (§48.4)
@@ -221,7 +221,7 @@ Ground rules (apply to every phase)
 - [x] Remote provider via `tpt-intellect-remote` only (no HTTP in Thought, §93)
 - [ ] Local provider support via Intellect (tpt-infer, tpt-spark, Ollama) without knowing internals (§94)
 - [x] `AugurAdapter`: states, posteriors, evidence updates, residual uncertainty (§49). Discrete states come from the posterior draws (`augur::states_of`); evidence updates and residuals are in `AugurSession`.
-- [x] `AxiomAdapter`: uncertainty types, validated values, formal constraints, verification markers (§50). `Proven` needs ZK proof verification and is not mapped (see blocked notes)
+- [x] `AxiomAdapter`: uncertainty types, validated values, formal constraints, verification markers (§50). `Proven` comes only from `verify_proven`, which checks a proof claim against a verifying key the caller trusts (see blocked notes)
 - [x] `PulseAdapter`: cognitive event stream (§53, §116). `tpt-pulse-core` gained `EventStream`, a broadcast stream, and `pulse::PulseSink` publishes observatory events to it. Pinned to `tpt-pulse` `f36c1f0`.
 - [x] Multi-agent thought sharing: broadcast, independent evaluation, ensemble merge via INP (§39)
 - [x] Backend evolution test: add a new backend without modifying cognitive model (§90)
@@ -233,8 +233,7 @@ Ground rules (apply to every phase)
 - [x] Metrics: ThoughtLatency, ThoughtDepth, BranchCount, InferenceCount, EscalationRate, AbstentionRate, PredictionAccuracy/Error, BeliefRevisionRate, MemoryRetrievalRate, DecisionConfidence, CalibrationError, CognitiveCost, InformationGain, ActionSuccessRate (§97)
 - [x] Telemetry sink abstraction (tracing-compatible, no required backend)
 - [x] Observatory data model: active thoughts, thought graph, hypotheses, providers, cost, state (§99)
-- [ ] Observatory UI (with Anima Observatory): graph view, attention, confidence, prediction errors, provider selection
-- [ ] Sleep/reflection cycle visualisation
+- [x] Observatory UI and sleep/reflection cycle visualisation: out of scope. They belong to Anima Observatory, and Thought builds no visualisation
 
 ## Phase 12 — Security, Testing, Benchmarks, Docs & Release
 Security (§41)
@@ -350,12 +349,12 @@ Models · databases · LLM clients · tensor ops · probability maths · formal 
 ---
 
 ## Blocked and partial (open items)
-- **Axiom adapter (partial)**: built behind the `axiom` feature, pinned to `tpt-axiom` `42c495f7`. Covers validated probabilities, confidence, fuzzy variance, and `Verified` status for constraints checked by `tpt-axiom-verify`. ZK proof envelopes are not verified, so nothing yields `Proven`. Axiom's `decision_types` (`Calibration`, `Decision`) are not adapted.
+- **Axiom adapter (partial)**: built behind the `axiom` feature, pinned to `tpt-axiom` `42c495f7`. Covers validated probabilities, confidence, fuzzy variance, and `Verified` status for constraints checked by `tpt-axiom-verify`. `verify_proven` gives `Proven` for a `ProofClaim` that verifies under a backend and a verifying key the caller trusts. The adapter ships no trusted key and picks no backend, so `Proven` is only reachable when a caller supplies both. Axiom's `decision_types` (`Calibration`, `Decision`) are not adapted.
 - **Remote and local providers**: remote (loopback and caller-supplied transports) and local (`tpt-infer` classifier) are built. The `tpt-infer` pin relies on `Cargo.lock`: cargo rejects a workspace patch pointing at the same source, and the sibling manifest names no revision. Ollama and `tpt-spark` are not in the sibling survey and are not built.
 - **Eve query ranking**: no tokio-free API found.
 - **Golden scenario against real siblings**: the real-adapter scenario runs the full slow path (Intellect, Eve, Augur, re-evaluation). The Intellect reference backend is set to two candidates so its first answer is below `accept_at`. Eve holds no facts about the object, so its investigation stops on risk. Augur is still a fixed estimate.
-- **Anima**: no `retrieve_context` (covered by `recall_similar`) and no global workspace. Intention execution is tracked by `AnimaIntention`, with no fallbacks. The ZKPA adapter covers sessions, delegation, attestation and proofs. Ownership states and the agency ledger are not mapped.
+- **Anima**: no `retrieve_context` (covered by `recall_similar`) and no global workspace. Intention execution is tracked by `AnimaIntention`, with no fallbacks. The ZKPA adapter covers sessions, delegation, attestation, proofs, and ownership transfers recorded in Thought's agency ledger.
 
-- **Observatory UI**: belongs to Anima Observatory, out of scope for Thought.
+- **Observatory UI and sleep visualisation**: belong to Anima Observatory, out of scope for Thought.
 - **Release tag `v0.1.0`**: exists locally (commit `220fc9b`); the later commits are not covered by it.
 - **Consolidator input (Phase 13)**: the loop owns a consolidator and exposes `sleep()`, but nothing feeds it episodes, beliefs or calibration samples automatically. Callers record them with `consolidator_mut()`.

@@ -67,9 +67,15 @@ needs. The `zkpa` feature wraps the following in `AnimaIdentity`:
   verification key embedded in the proof, so it shows internal consistency, not a trusted setup. The
   proof is not bound to a particular agent.
 
-Ownership states and the agency ledger have no counterpart in the pinned `tpt-anima-zkpa`, so they
-are not mapped. Delegation grants permissions, not responsibility, so it is not treated as
-`ThoughtOwnership::Delegated`.
+Ownership states and the agency ledger have no counterpart in the pinned `tpt-anima-zkpa`, so Thought
+keeps them. `ThoughtOwnership` (core) defines the states and the moves allowed between them, and
+`AgencyLedger` (core) records each owner and every change, with the actor and its basis. Delegation
+grants permissions, not responsibility, so it is not treated as `ThoughtOwnership::Delegated`.
+
+`AnimaIdentity::transfer_ownership` moves a thought only for an agent with authority from ZKPA
+delegation: the agent holding it, the owner (who can reclaim it), or an agent with a live
+`thought:transfer` permission. The basis is recorded as a `zkpa:` marker. Revoking the permission
+takes effect on the next transfer. The ledger is not hash-chained, so it does not detect tampering.
 
 ## Resource admission and homeostasis
 

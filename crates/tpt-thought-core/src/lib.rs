@@ -23,7 +23,7 @@ pub use budget::CognitiveBudget;
 pub use confidence::{Confidence, Probability};
 pub use content::*;
 pub use id::*;
-pub use ownership::ThoughtOwnership;
+pub use ownership::{AgencyEntry, AgencyLedger, LedgerError, ThoughtOwnership};
 pub use random::{RandomnessMetadata, TransitionKind};
 pub use state::ThoughtState;
 pub use thought::*;
